@@ -9,7 +9,6 @@ namespace MeetIQ.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
 
-        // Navigation
         public ICollection<CalendarEvent> CalendarEvents { get; set; } = new List<CalendarEvent>();
         public ICollection<MeetingParticipant> Participations { get; set; } = new List<MeetingParticipant>();
         public ICollection<Note> Notes { get; set; } = new List<Note>();

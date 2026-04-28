@@ -1,0 +1,690 @@
+﻿@using MeetIQ.Application.Features.Auth.Commands.RegisterCommand
+@model RegisterDto
+
+@{
+    ViewData["Title"] = "Create Account";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Account – MeetIQ</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            400: '#5a8eff',
+                            500: '#3366ff',
+                            600: '#1a44f5',
+                            700: '#1332e1',
+                            900: '#17278f',
+                        },
+                        surface: {
+                            DEFAULT: '#0f1117',
+                            card: '#161b27',
+                            border: '#1f2637',
+                            hover: '#1c2235',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"DM Sans"', 'sans-serif'],
+                        display: ['"Syne"', 'sans-serif'],
+                        mono: ['"DM Mono"', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <style>
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1f2637;
+            border-radius: 99px;
+        }
+
+        .dot-grid {
+            background-image: radial-gradient(circle, #1f2637 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(26,68,245,0.13) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* ── Field base ── */
+        .field-input {
+            width: 100%;
+            background: #161b27;
+            border: 1px solid #1f2637;
+            border-radius: 0.75rem;
+            padding: 0.625rem 1rem 0.625rem 2.5rem;
+            font-size: 0.875rem;
+            color: #fff;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+            .field-input::placeholder {
+                color: #4b5563;
+            }
+
+            .field-input:focus {
+                outline: none;
+                border-color: #3366ff;
+                box-shadow: 0 0 0 3px rgba(51,102,255,0.12);
+            }
+            /* jQuery Validate error state — uses the class the library adds */
+            .field-input.input-validation-error {
+                border-color: #ef4444 !important;
+            }
+
+                .field-input.input-validation-error:focus {
+                    box-shadow: 0 0 0 3px rgba(239,68,68,0.12) !important;
+                }
+
+        .has-toggle {
+            padding-right: 2.75rem !important;
+        }
+
+        /* ── Validation message spans ──
+                   Unobtrusive sets innerHTML and adds .field-validation-error to show */
+        .val-msg {
+            display: none;
+            font-size: 11px;
+            color: #f87171;
+            margin-top: 4px;
+            align-items: center;
+            gap: 4px;
+        }
+
+            .val-msg.field-validation-error {
+                display: flex;
+            }
+
+            .val-msg .err-icon {
+                width: 12px;
+                height: 12px;
+                flex-shrink: 0;
+            }
+
+        /* Manual error message (terms, complexity) */
+        .manual-error {
+            display: none;
+            font-size: 11px;
+            color: #f87171;
+            margin-top: 4px;
+            align-items: center;
+            gap: 4px;
+        }
+
+            .manual-error.show {
+                display: flex;
+            }
+
+            .manual-error svg {
+                width: 12px;
+                height: 12px;
+                flex-shrink: 0;
+            }
+
+        /* ── Password rule icon toggling ──
+                   By default show the circle, hide the checkmark.
+                   When .rule-pass is added to the row, flip them.        */
+        .rule-row .icon-done {
+            display: none;
+            color: #22c55e;
+        }
+
+        .rule-row .icon-pending {
+            display: block;
+        }
+
+        .rule-row.rule-pass {
+            color: #22c55e;
+        }
+
+            .rule-row.rule-pass .icon-pending {
+                display: none;
+            }
+
+            .rule-row.rule-pass .icon-done {
+                display: block;
+            }
+
+        /* Password strength bar */
+        .strength-seg {
+            height: 3px;
+            border-radius: 99px;
+            flex: 1;
+            background: #1f2637;
+        }
+
+        /* Google button */
+        .btn-google {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 0.625rem 1rem;
+            background: #161b27;
+            border: 1px solid #1f2637;
+            border-radius: 0.75rem;
+            color: #cbd5e1;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .15s, border-color .15s, color .15s;
+        }
+
+            .btn-google:hover {
+                background: #1c2235;
+                border-color: #2d3748;
+                color: #fff;
+            }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+</head>
+
+<body class="h-full bg-surface font-sans text-slate-300 antialiased overflow-x-hidden">
+
+    <div class="relative min-h-screen dot-grid flex">
+
+        <!-- Orbs -->
+        <div class="orb w-[500px] h-[500px] -top-32 -left-32 opacity-60"></div>
+        <div class="orb w-[400px] h-[400px] bottom-0 right-0 opacity-40"></div>
+
+        <!-- ════════════════ LEFT PANEL ════════════════ -->
+        <div class="hidden lg:flex relative z-10 w-[480px] shrink-0 flex-col justify-between
+                border-r border-surface-border bg-surface-card/60 backdrop-blur-sm p-10">
+
+            <a href="/" class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white"
+                         stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 20h5v-2a4 4 0 0 0-4-4h-1" />
+                        <path d="M9 20H4v-2a4 4 0 0 1 4-4h1" />
+                        <circle cx="12" cy="8" r="4" />
+                    </svg>
+                </div>
+                <span class="text-white font-semibold font-display text-[17px]">
+                    Meet<span class="text-brand-400">IQ</span>
+                </span>
+            </a>
+
+            <div>
+                <p class="text-xs font-mono text-brand-400 uppercase tracking-widest mb-4">Why MeetIQ?</p>
+                <h2 class="font-display text-3xl font-bold text-white leading-snug mb-8">
+                    Every meeting,<br />captured & understood.
+                </h2>
+                <ul class="space-y-5">
+                    <li class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-600/15 border border-brand-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="mic-2" class="w-4 h-4 text-brand-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-white text-sm font-medium">AI Transcription</p>
+                            <p class="text-slate-500 text-xs mt-0.5 leading-relaxed">Whisper API turns every recording into accurate, searchable text.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-600/15 border border-brand-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-brand-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-white text-sm font-medium">Smart Summaries</p>
+                            <p class="text-slate-500 text-xs mt-0.5 leading-relaxed">AI extracts key decisions and action items automatically.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-600/15 border border-brand-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="check-square" class="w-4 h-4 text-brand-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-white text-sm font-medium">Task Management</p>
+                            <p class="text-slate-500 text-xs mt-0.5 leading-relaxed">Generated tasks are assigned and tracked — no manual entry.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-600/15 border border-brand-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-brand-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-white text-sm font-medium">Secure by Default</p>
+                            <p class="text-slate-500 text-xs mt-0.5 leading-relaxed">TLS everywhere, encrypted at rest, role-based access control.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <p class="text-xs text-slate-700 font-mono">&copy; @DateTime.Now.Year MeetIQ &mdash; Smart Productivity Platform</p>
+        </div>
+
+        <!-- ════════════════ RIGHT PANEL ════════════════ -->
+        <div class="relative z-10 flex flex-1 items-center justify-center px-6 py-16">
+            <div class="w-full max-w-[420px]">
+
+                <!-- Mobile logo -->
+                <a href="/" class="flex lg:hidden items-center gap-2 mb-10 justify-center">
+                    <div class="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white"
+                             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 20h5v-2a4 4 0 0 0-4-4h-1" />
+                            <path d="M9 20H4v-2a4 4 0 0 1 4-4h1" />
+                            <circle cx="12" cy="8" r="4" />
+                        </svg>
+                    </div>
+                    <span class="text-white font-semibold font-display text-[16px]">
+                        Meet<span class="text-brand-400">IQ</span>
+                    </span>
+                </a>
+
+                <!-- Title -->
+                <div class="mb-8">
+                    <h1 class="font-display text-3xl font-bold text-white mb-2">Create your account</h1>
+                    <p class="text-slate-500 text-sm">
+                        Already have an account?
+                        <a href="/Auth/Login"
+                           class="text-brand-400 hover:text-brand-300 font-medium transition-colors">Sign in</a>
+                    </p>
+                </div>
+
+                <!-- Server-side error banner -->
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="mb-6 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 flex items-start gap-3">
+                        <i data-lucide="alert-circle" class="w-4 h-4 text-red-400 shrink-0 mt-0.5"></i>
+                        <div asp-validation-summary="ModelOnly" class="text-red-400 text-xs leading-relaxed"></div>
+                    </div>
+                }
+
+                <!-- ══════════ GOOGLE AUTH ══════════ -->
+                <form id="googleForm" asp-action="ExternalLogin" method="post" class="mb-5">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="provider" value="Google" />
+                    <button type="submit" class="btn-google">
+                        <!-- Google "G" logo -->
+                        <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                            <path fill="none" d="M0 0h48v48H0z" />
+                        </svg>
+                        Continue with Google
+                    </button>
+                </form>
+
+                <!-- Divider -->
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="flex-1 h-px bg-surface-border"></div>
+                    <span class="text-xs text-slate-600 font-mono">or register with email</span>
+                    <div class="flex-1 h-px bg-surface-border"></div>
+                </div>
+
+                <!-- ══════════ REGISTER FORM ══════════ -->
+                <form asp-action="Register" method="post" class="space-y-5" id="registerForm">
+                    @Html.AntiForgeryToken()
+
+                    <!-- FullName -->
+                    <div class="space-y-1.5">
+                        <label asp-for="FullName"
+                               class="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+                            Username
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
+                                <i data-lucide="at-sign" class="w-4 h-4"></i>
+                            </span>
+                            <input asp-for="FullName"
+                                   autocomplete="username"
+                                   placeholder="your_username"
+                                   class="field-input font-mono" />
+                        </div>
+                        <!-- PLAIN empty span — Unobtrusive writes here -->
+                        <span asp-validation-for="FullName" class="val-msg"></span>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="space-y-1.5">
+                        <label asp-for="Email"
+                               class="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+                            Email address
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
+                                <i data-lucide="mail" class="w-4 h-4"></i>
+                            </span>
+                            <input asp-for="Email"
+                                   type="email"
+                                   autocomplete="email"
+                                   placeholder="you@example.com"
+                                   class="field-input" />
+                        </div>
+                        <span asp-validation-for="Email" class="val-msg"></span>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="space-y-1.5">
+                        <label asp-for="Password"
+                               class="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+                            Password
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
+                                <i data-lucide="lock" class="w-4 h-4"></i>
+                            </span>
+                            <input asp-for="Password"
+                                   type="password"
+                                   id="passwordInput"
+                                   autocomplete="new-password"
+                                   placeholder="••••••••"
+                                   class="field-input has-toggle" />
+                            <button type="button" id="togglePassword"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2
+                                       text-slate-600 hover:text-slate-400 transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4" id="eyeIcon"></i>
+                            </button>
+                        </div>
+
+                        <!-- Strength bar -->
+                        <div class="flex gap-1.5 pt-1">
+                            <div class="strength-seg" id="seg1"></div>
+                            <div class="strength-seg" id="seg2"></div>
+                            <div class="strength-seg" id="seg3"></div>
+                            <div class="strength-seg" id="seg4"></div>
+                        </div>
+                        <p class="text-[11px] font-mono text-slate-600" id="strengthLabel">Enter a password</p>
+
+                        <span asp-validation-for="Password" class="val-msg"></span>
+                    </div>
+
+                    <!-- Password rules checklist -->
+                    <div class="rounded-xl border border-surface-border bg-surface p-3.5" id="pwdRulesBox">
+                        <p class="text-[11px] font-mono text-slate-600 uppercase tracking-wider mb-2">Password must include</p>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div class="rule-row flex items-center gap-1.5 text-[11px] text-slate-600" id="rule-len">
+                                <!-- circle (default) -->
+                                <svg class="icon-pending w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /></svg>
+                                <!-- check-circle (when rule passes) -->
+                                <svg class="icon-done w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                At least 8 characters
+                            </div>
+                            <div class="rule-row flex items-center gap-1.5 text-[11px] text-slate-600" id="rule-upper">
+                                <svg class="icon-pending w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /></svg>
+                                <svg class="icon-done w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                Uppercase letter
+                            </div>
+                            <div class="rule-row flex items-center gap-1.5 text-[11px] text-slate-600" id="rule-num">
+                                <svg class="icon-pending w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /></svg>
+                                <svg class="icon-done w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                Number
+                            </div>
+                            <div class="rule-row flex items-center gap-1.5 text-[11px] text-slate-600" id="rule-special">
+                                <svg class="icon-pending w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /></svg>
+                                <svg class="icon-done w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                Special character
+                            </div>
+                        </div>
+
+                        <!-- Complexity error shown when user tries to submit with failing rules -->
+                        <div class="manual-error mt-2" id="pwd-complexity-error">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            Password does not meet all requirements above.
+                        </div>
+                    </div>
+
+                    <!-- Terms checkbox -->
+                    <div>
+                        <div class="flex items-start gap-3">
+                            <input type="checkbox" id="terms"
+                                   class="mt-0.5 w-4 h-4 rounded border-surface-border bg-surface-card
+                                      accent-brand-600 cursor-pointer shrink-0" />
+                            <label for="terms" class="text-xs text-slate-500 leading-relaxed cursor-pointer">
+                                I agree to the
+                                <a href="/Home/Privacy" class="text-brand-400 hover:text-brand-300 transition-colors">Privacy Policy</a>
+                                and terms of service for MeetIQ.
+                            </label>
+                        </div>
+                        <!-- Terms error -->
+                        <div class="manual-error mt-1.5" id="terms-error">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            You must agree to the Privacy Policy and terms of service.
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" id="submitBtn"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-2.5
+                               bg-brand-600 hover:bg-brand-500
+                               text-white text-sm font-semibold rounded-xl transition-colors">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        Create account
+                    </button>
+
+                </form>
+
+                <!-- Bottom security badges -->
+                <div class="flex items-center justify-center gap-4 mt-6 text-[11px] text-slate-700 font-mono">
+                    <span class="flex items-center gap-1">
+                        <i data-lucide="lock" class="w-3 h-3"></i> TLS encrypted
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <i data-lucide="shield" class="w-3 h-3"></i> RBAC protected
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <i data-lucide="key" class="w-3 h-3"></i> JWT auth
+                    </span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ Scripts — ORDER MATTERS ════════════ -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+    <script>
+        (function ($) {
+            'use strict';
+
+            lucide.createIcons();
+
+            /* ══════════════════════════════════════════════════════════════
+               1. UNOBTRUSIVE VALIDATION ICON SYNC
+               Unobtrusive writes error text into .val-msg spans and toggles
+               .field-validation-error. We watch with MutationObserver and
+               prepend our inline SVG icon so the span looks styled.
+            ══════════════════════════════════════════════════════════════ */
+            var ALERT_SVG = '<svg class="err-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"' +
+                ' fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<circle cx="12" cy="12" r="10"/>' +
+                '<line x1="12" y1="8" x2="12" y2="12"/>' +
+                '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+
+            function syncIcon(span) {
+                if (span.classList.contains('field-validation-error')) {
+                    if (!span.querySelector('.err-icon')) {
+                        span.insertAdjacentHTML('afterbegin', ALERT_SVG);
+                    }
+                } else {
+                    var icon = span.querySelector('.err-icon');
+                    if (icon) icon.remove();
+                }
+            }
+
+            document.querySelectorAll('.val-msg').forEach(function (span) {
+                syncIcon(span); // catch server-side errors on load
+                new MutationObserver(function () { syncIcon(span); })
+                    .observe(span, { attributes: true, attributeFilter: ['class'], childList: true });
+            });
+
+            /* ══════════════════════════════════════════════════════════════
+               2. PASSWORD TOGGLE
+            ══════════════════════════════════════════════════════════════ */
+            var pwdInput = document.getElementById('passwordInput');
+            var toggleBtn = document.getElementById('togglePassword');
+            var eyeEl = document.getElementById('eyeIcon');
+
+            toggleBtn.addEventListener('click', function () {
+                var hidden = pwdInput.type === 'password';
+                pwdInput.type = hidden ? 'text' : 'password';
+                eyeEl.setAttribute('data-lucide', hidden ? 'eye-off' : 'eye');
+                lucide.createIcons();
+            });
+
+            /* ══════════════════════════════════════════════════════════════
+               3. PASSWORD STRENGTH METER + LIVE RULES CHECKLIST
+            ══════════════════════════════════════════════════════════════ */
+            var segs = [
+                document.getElementById('seg1'),
+                document.getElementById('seg2'),
+                document.getElementById('seg3'),
+                document.getElementById('seg4'),
+            ];
+            var strengthLabel = document.getElementById('strengthLabel');
+
+            var COLORS = { 0: '#1f2637', 1: '#ef4444', 2: '#f97316', 3: '#eab308', 4: '#22c55e' };
+            var LABELS = ['Enter a password', 'Weak', 'Fair', 'Good', 'Strong'];
+
+            var RULES = [
+                { id: 'rule-len', fn: function (v) { return v.length >= 8; } },
+                { id: 'rule-upper', fn: function (v) { return /[A-Z]/.test(v); } },
+                { id: 'rule-num', fn: function (v) { return /[0-9]/.test(v); } },
+                { id: 'rule-special', fn: function (v) { return /[^A-Za-z0-9]/.test(v); } },
+            ];
+
+            function getScore(val) {
+                var s = 0;
+                RULES.forEach(function (r) { if (val.length > 0 && r.fn(val)) s++; });
+                return s;
+            }
+
+            function updateStrength(val) {
+                var score = getScore(val);
+
+                // Toggle .rule-pass on each rule row — CSS handles icon swap + color
+                RULES.forEach(function (rule) {
+                    var el = document.getElementById(rule.id);
+                    var pass = val.length > 0 && rule.fn(val);
+                    if (pass) {
+                        el.classList.add('rule-pass');
+                    } else {
+                        el.classList.remove('rule-pass');
+                    }
+                });
+
+                // Update bar
+                segs.forEach(function (seg, i) {
+                    seg.style.background = (i < score) ? COLORS[score] : COLORS[0];
+                });
+
+                // Update label
+                strengthLabel.textContent = LABELS[score];
+                strengthLabel.style.color = score === 0 ? '#4b5563' : COLORS[score];
+            }
+
+            pwdInput.addEventListener('input', function () {
+                updateStrength(pwdInput.value);
+                // Hide complexity error while user is still typing
+                document.getElementById('pwd-complexity-error').classList.remove('show');
+            });
+
+            /* ══════════════════════════════════════════════════════════════
+               4. FORM SUBMIT GUARD
+               Blocks submission if:
+                 a) jQuery Validate finds any data-val-* field invalid
+                 b) Password complexity rules are not all met
+                 c) Terms checkbox is not checked
+            ══════════════════════════════════════════════════════════════ */
+            var termsError = document.getElementById('terms-error');
+            var complexityError = document.getElementById('pwd-complexity-error');
+            var termsCheckbox = document.getElementById('terms');
+
+            // Clear terms error as soon as user checks it
+            termsCheckbox.addEventListener('change', function () {
+                if (this.checked) termsError.classList.remove('show');
+            });
+
+            document.getElementById('registerForm').addEventListener('submit', function (e) {
+                var pwdVal = pwdInput.value;
+                var allRules = getScore(pwdVal) === 4;
+                var termsOk = termsCheckbox.checked;
+                var formValid = $(this).valid(); // triggers jQuery Validate on all fields
+
+                var block = false;
+
+                // Check password complexity (jQuery Validate only checks data-val-* rules)
+                if (pwdVal.length > 0 && !allRules) {
+                    complexityError.classList.add('show');
+                    block = true;
+                } else {
+                    complexityError.classList.remove('show');
+                }
+
+                // Check password empty — covered by jQuery Validate, but guard anyway
+                if (pwdVal.length === 0) {
+                    block = true;
+                }
+
+                // Check terms
+                if (!termsOk) {
+                    termsError.classList.add('show');
+                    block = true;
+                } else {
+                    termsError.classList.remove('show');
+                }
+
+                if (!formValid || block) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+        })(jQuery);
+    </script>
+
+</body>
+</html>

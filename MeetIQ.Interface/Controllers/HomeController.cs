@@ -1,4 +1,5 @@
 using MeetIQ.Interface.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
@@ -13,7 +14,13 @@ namespace MeetIQ.Interface.Controllers
             _logger = logger;
         }
 
+        [Authorize]
         public IActionResult Index()
+        {
+            return View();
+        }
+        
+        public IActionResult LandingPage()
         {
             return View();
         }

@@ -1,3 +1,10 @@
+using MeetIQ.Application.DependencyInjection;
+using MeetIQ.Domain.Entities;
+using MeetIQ.Infrastructure.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
+using System;
+
 namespace MeetIQ.Interface
 {
     public class Program
@@ -7,7 +14,32 @@ namespace MeetIQ.Interface
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+            builder.Services.AddApplicationServices();
+            builder.Services.AddInfrastructureServices(builder.Configuration);
+            //builder.Services.AddHttpContextAccessor();
             builder.Services.AddControllersWithViews();
+
+            //  Cookie config 
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Auth/Login";
+                options.LogoutPath = "/Auth/Logout";
+                options.AccessDeniedPath = "/Auth/AccessDenied";
+                options.ExpireTimeSpan = TimeSpan.FromDays(30);
+                options.SlidingExpiration = true;
+            });
+
+            builder.Services.AddAuthentication()
+                .AddGoogle(options =>
+                {
+                    var google = builder.Configuration.GetSection("Authentication:Google");
+
+                    options.ClientId = google["ClientId"]!;
+                    options.ClientSecret = google["ClientSecret"]!;
+                    options.CallbackPath = "/signin-google";
+
+                    options.Scope.Add("profile");
+                });
 
             var app = builder.Build();
 
@@ -24,11 +56,12 @@ namespace MeetIQ.Interface
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
+                pattern: "{controller=Home}/{action=LandingPage}/{id?}");
 
             app.Run();
         }

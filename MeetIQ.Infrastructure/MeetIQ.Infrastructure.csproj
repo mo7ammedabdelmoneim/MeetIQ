@@ -24,4 +24,9 @@
     <PackageReference Include="SqlKata.Execution" Version="4.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MeetIQ.Application\MeetIQ.Application.csproj" />
+    <ProjectReference Include="..\MeetIQ.Domain\MeetIQ.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

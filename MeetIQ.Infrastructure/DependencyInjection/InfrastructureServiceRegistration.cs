@@ -1,0 +1,62 @@
+﻿using MeetIQ.Application.Interfaces.Services;
+using MeetIQ.Domain.Entities;
+using MeetIQ.Infrastructure.Presistence;
+using MeetIQ.Infrastructure.Services;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using SqlKata.Compilers;
+using SqlKata.Execution;
+using System.Data;
+
+namespace MeetIQ.Infrastructure.DependencyInjection
+{
+    public static class InfrastructureServiceRegistration
+    {
+        public static IServiceCollection AddInfrastructureServices(
+           this IServiceCollection services,
+           IConfiguration configuration)
+        {
+            // DbContext
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(
+                    configuration.GetConnectionString("DefaultConnection")));
+
+            // IDbConnection - Dapper
+            services.AddScoped<IDbConnection>(sp =>
+                            new SqlConnection(configuration.GetConnectionString("DefaultConnection")));
+
+            // SqlKata
+            services.AddScoped<QueryFactory>(sp =>
+            {
+                var connection = sp.GetRequiredService<IDbConnection>();
+
+                var compiler = new SqlServerCompiler();
+
+                return new QueryFactory(connection, compiler);
+            });
+
+            // Identity
+            services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequiredLength = 8;
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+            // Repositories
+
+
+            // Services
+            services.AddScoped<IAuthService, AuthService>();
+
+
+            return services;
+        }
+    }
+}
