@@ -1,4 +1,3 @@
-using MeetIQ.Interface.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -20,20 +19,22 @@ namespace MeetIQ.Interface.Controllers
             return View();
         }
         
-        public IActionResult LandingPage()
+        public IActionResult NotFound()
         {
-            return View();
+            Response.StatusCode = 404;
+            return View("NotFound");
         }
 
+        public IActionResult Error()
+        {
+            var requestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+            ViewData["RequestId"] = requestId;
+            return View("Error");
+        }
         public IActionResult Privacy()
         {
             return View();
         }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
     }
 }

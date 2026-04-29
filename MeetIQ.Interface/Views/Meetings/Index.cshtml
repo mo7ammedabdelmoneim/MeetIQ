@@ -1,0 +1,26 @@
+﻿@model List<MeetingListItemDto>
+
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Scheduled</th>
+            <th>Ended</th>
+            <th>Participants</th>
+            <th>Owner</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td>@m.Title</td>
+                <td>@m.ScheduledAt</td>
+                <td>@m.EndedAt</td>
+                <td>@m.ParticipantsCount</td>
+                <td>@(m.IsOwner ? "Yes" : "No")</td>
+            </tr>
+        }
+    </tbody>
+</table>

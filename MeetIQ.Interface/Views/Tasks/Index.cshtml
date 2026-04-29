@@ -1,0 +1,303 @@
+﻿@model PagedResult<TaskListItemDto>
+@{
+    ViewData["Title"] = "Tasks";
+}
+
+<!-- ── TOOLBAR ── -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+        <h2 class="text-lg font-semibold text-white tracking-tight">My Tasks</h2>
+        <p class="text-xs text-slate-500 mt-0.5">@Model.TotalCount task@(Model.TotalCount == 1 ? "" : "s") total</p>
+    </div>
+    <a href="@Url.Action("Create", "Tasks")"
+       class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500
+              text-white text-sm font-semibold rounded-lg transition-colors shadow-glow shrink-0">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        New Task
+    </a>
+</div>
+
+<!-- ── FILTERS ── -->
+<form method="get" class="flex flex-wrap gap-2 mb-6" id="filterForm">
+    <!-- Search -->
+    <div class="relative flex-1 min-w-[200px]">
+        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+        <input type="text" name="search" value="@Context.Request.Query["search"]"
+               placeholder="Search tasks…"
+               class="w-full pl-9 pr-3 py-2 bg-surface-card border border-surface-border rounded-lg
+                      text-sm text-slate-300 placeholder-slate-600 focus:outline-none
+                      focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 transition-colors" />
+    </div>
+
+    <!-- Status -->
+    <select name="status" onchange="this.form.submit()"
+            class="px-3 py-2 bg-surface-card border border-surface-border rounded-lg
+                   text-sm text-slate-300 focus:outline-none focus:border-brand-600 transition-colors cursor-pointer">
+        <option value="">All Status</option>
+        @foreach (var s in Enum.GetValues<MeetIQ.Domain.Enums.TaskStatus>())
+        {
+            <option value="@((int)s)" selected="@(Context.Request.Query["status"] == ((int)s).ToString())">@s</option>
+        }
+    </select>
+
+    <!-- Priority -->
+    <select name="priority" onchange="this.form.submit()"
+            class="px-3 py-2 bg-surface-card border border-surface-border rounded-lg
+                   text-sm text-slate-300 focus:outline-none focus:border-brand-600 transition-colors cursor-pointer">
+        <option value="">All Priority</option>
+        @foreach (var p in Enum.GetValues<TaskPriority>())
+        {
+            <option value="@((int)p)" selected="@(Context.Request.Query["priority"] == ((int)p).ToString())">@p</option>
+        }
+    </select>
+
+    <button type="submit"
+            class="px-4 py-2 bg-surface-card border border-surface-border hover:border-brand-600
+                   text-sm text-slate-300 rounded-lg transition-colors">
+        Search
+    </button>
+
+    @if (Context.Request.Query.Any(q => q.Key is "search" or "status" or "priority" && !string.IsNullOrEmpty(q.Value)))
+    {
+        <a href="@Url.Action("Index")"
+           class="px-4 py-2 text-sm text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            Clear
+        </a>
+    }
+</form>
+
+<!-- ── TASK TABLE ── -->
+@if (!Model.Items.Any())
+{
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-surface-card border border-surface-border flex items-center justify-center mb-4">
+            <i data-lucide="check-square" class="w-6 h-6 text-slate-600"></i>
+        </div>
+        <p class="text-slate-400 font-medium">No tasks found</p>
+        <p class="text-slate-600 text-sm mt-1">Create a new task or adjust your filters.</p>
+    </div>
+}
+else
+{
+    <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-surface-border">
+                    <th class="text-left text-[11px] uppercase tracking-widest text-slate-600 font-semibold px-5 py-3">Title</th>
+                    <th class="text-left text-[11px] uppercase tracking-widest text-slate-600 font-semibold px-4 py-3 hidden md:table-cell">Priority</th>
+                    <th class="text-left text-[11px] uppercase tracking-widest text-slate-600 font-semibold px-4 py-3 hidden sm:table-cell">Status</th>
+                    <th class="text-left text-[11px] uppercase tracking-widest text-slate-600 font-semibold px-4 py-3 hidden lg:table-cell">Due Date</th>
+                    <th class="text-left text-[11px] uppercase tracking-widest text-slate-600 font-semibold px-4 py-3 hidden lg:table-cell">Source</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-surface-border">
+                @foreach (var task in Model.Items)
+                {
+                    <tr class="hover:bg-surface-hover transition-colors group">
+                        <!-- Title -->
+                        <td class="px-5 py-3.5">
+                            <a href="@Url.Action("Details", "Tasks", new { id = task.Id })"
+                               class="text-white font-medium hover:text-brand-400 transition-colors line-clamp-1">
+                                @task.Title
+                            </a>
+                        </td>
+
+                        <!-- Priority -->
+                        <td class="px-4 py-3.5 hidden md:table-cell">
+                            @{
+                                var (priColor, priLabel) = task.Priority switch
+                                {
+                                    TaskPriority.High => ("bg-red-500/10 text-red-400 border-red-500/20", "High"),
+                                    TaskPriority.Medium => ("bg-amber-500/10 text-amber-400 border-amber-500/20", "Medium"),
+                                    _ => ("bg-slate-500/10 text-slate-400 border-slate-500/20", "Low"),
+                                };
+                            }
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-semibold @priColor">
+                                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                @priLabel
+                            </span>
+                        </td>
+
+                        <!-- Status -->
+                        <td class="px-4 py-3.5 hidden sm:table-cell">
+                            @{
+                                var (stColor, stLabel) = task.Status switch
+                                {
+                                    MeetIQ.Domain.Enums.TaskStatus.InProgress => ("bg-brand-500/10 text-brand-400 border-brand-500/20", "In Progress"),
+                                    MeetIQ.Domain.Enums.TaskStatus.Done => ("bg-emerald-500/10 text-emerald-400 border-emerald-500/20", "Done"),
+                                    MeetIQ.Domain.Enums.TaskStatus.ToDo => ("bg-slate-500/10 text-slate-500 border-slate-700", "ToDo"),
+                                    _ => ("bg-slate-500/10 text-slate-400 border-slate-500/20", "To Do"),
+                                };
+
+                            }
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold @stColor">
+                                @stLabel
+                            </span>
+                        </td>
+
+                        <!-- Due Date -->
+                        <td class="px-4 py-3.5 hidden lg:table-cell">
+                            @if (task.DueDate.HasValue)
+                            {
+                                var overdue = task.DueDate.Value < DateTime.UtcNow && task.Status != MeetIQ.Domain.Enums.TaskStatus.Done;
+                                <span class="text-xs @(overdue ? "text-red-400" : "text-slate-400")">
+                                    @(overdue ? "⚠ " : "")@task.DueDate.Value.ToString("MMM d, yyyy")
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="text-slate-700 text-xs">—</span>
+                            }
+                        </td>
+
+                        <!-- Source -->
+                        <td class="px-4 py-3.5 hidden lg:table-cell">
+                            @if (task.IsAutoGenerated)
+                            {
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[11px] font-semibold">
+                                    <i data-lucide="sparkles" class="w-3 h-3"></i>
+                                    AI
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="text-slate-600 text-xs">Manual</span>
+                            }
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-4 py-3.5 text-right">
+                            <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href="@Url.Action("Edit", "Tasks", new { id = task.Id })"
+                                   class="p-1.5 rounded-lg hover:bg-surface-border text-slate-500 hover:text-white transition-colors"
+                                   title="Edit">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                </a>
+                                <button type="button"
+                                        onclick="openDeleteModal('@task.Id', '@task.Title.Replace("'", "\\'")')"
+                                        class="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors"
+                                        title="Delete">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ── PAGINATION ── -->
+    @if (Model.TotalCount > Model.PageSize)
+    {
+        var totalPages = (int)Math.Ceiling((double)Model.TotalCount / Model.PageSize);
+        var qs = Context.Request.Query
+            .Where(q => q.Key != "page")
+            .Select(q => $"{q.Key}={q.Value}")
+            .ToList();
+        var baseQs = qs.Any() ? "&" + string.Join("&", qs) : "";
+
+        <div class="flex items-center justify-between mt-4 text-sm">
+            <span class="text-slate-600 text-xs">
+                Page @Model.Page of @totalPages
+            </span>
+            <div class="flex items-center gap-1">
+                @if (Model.Page > 1)
+                {
+                    <a href="?page=@(Model.Page - 1)@baseQs"
+                       class="px-3 py-1.5 bg-surface-card border border-surface-border hover:border-brand-600 rounded-lg text-slate-300 hover:text-white transition-colors text-xs">
+                        ← Prev
+                    </a>
+                }
+                @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(totalPages, Model.Page + 2); i++)
+                {
+                    <a href="?page=@i@baseQs"
+                       class="px-3 py-1.5 rounded-lg text-xs transition-colors @(i == Model.Page ? "bg-brand-600 text-white font-semibold" : "bg-surface-card border border-surface-border text-slate-400 hover:text-white hover:border-brand-600")">
+                        @i
+                    </a>
+                }
+                @if (Model.Page < totalPages)
+                {
+                    <a href="?page=@(Model.Page + 1)@baseQs"
+                       class="px-3 py-1.5 bg-surface-card border border-surface-border hover:border-brand-600 rounded-lg text-slate-300 hover:text-white transition-colors text-xs">
+                        Next →
+                    </a>
+                }
+            </div>
+        </div>
+    }
+}
+
+<!-- ── DELETE MODAL ── -->
+<div id="deleteModal"
+     class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+     aria-modal="true" role="dialog">
+
+    <!-- Backdrop -->
+    <div id="deleteBackdrop"
+         class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+         onclick="closeDeleteModal()"></div>
+
+    <!-- Dialog -->
+    <div class="relative bg-[#161b27] border border-surface-border rounded-2xl shadow-2xl w-full max-w-sm p-6
+                animate-in fade-in zoom-in-95 duration-200">
+
+        <!-- Icon -->
+        <div class="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4 mx-auto">
+            <i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i>
+        </div>
+
+        <!-- Text -->
+        <h3 class="text-white font-semibold text-center text-base mb-1">Delete Task</h3>
+        <p class="text-slate-400 text-sm text-center mb-1">Are you sure you want to delete</p>
+        <p id="deleteTaskTitle"
+           class="text-white text-sm font-medium text-center mb-6 truncate px-2"></p>
+
+        <!-- Actions -->
+        <div class="flex gap-3">
+            <button type="button" onclick="closeDeleteModal()"
+                    class="flex-1 px-4 py-2.5 bg-surface border border-surface-border hover:border-slate-500
+                           text-slate-300 hover:text-white text-sm font-medium rounded-lg transition-colors">
+                Cancel
+            </button>
+
+            <form id="deleteForm" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit"
+                        class="flex-1 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30
+                               text-red-400 hover:text-red-300 text-sm font-medium rounded-lg transition-colors
+                               flex items-center gap-2">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        lucide.createIcons();
+
+        function openDeleteModal(id, title) {
+            document.getElementById('deleteTaskTitle').textContent = `"${title}"`;
+            document.getElementById('deleteForm').action = `/Tasks/Delete/${id}`;
+            const modal = document.getElementById('deleteModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Close on Escape
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeDeleteModal();
+        });
+    </script>
+}

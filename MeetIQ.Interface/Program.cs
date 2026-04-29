@@ -1,9 +1,6 @@
 using MeetIQ.Application.DependencyInjection;
-using MeetIQ.Domain.Entities;
 using MeetIQ.Infrastructure.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Identity;
-using System;
+using MeetIQ.Interface.Controllers;
 
 namespace MeetIQ.Interface
 {
@@ -18,6 +15,10 @@ namespace MeetIQ.Interface
             builder.Services.AddInfrastructureServices(builder.Configuration);
             //builder.Services.AddHttpContextAccessor();
             builder.Services.AddControllersWithViews();
+            //builder.Services.AddControllersWithViews(options =>
+            //{
+            //    options.Filters.Add<GlobalExceptionFilter>();
+            //});
 
             //  Cookie config 
             builder.Services.ConfigureApplicationCookie(options =>
@@ -55,13 +56,13 @@ namespace MeetIQ.Interface
             app.UseStaticFiles();
 
             app.UseRouting();
-
+            app.UseExceptionHandler("/Error");
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=LandingPage}/{id?}");
+                pattern: "{controller=Home}/{action=Index}/{id?}");
 
             app.Run();
         }

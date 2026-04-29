@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using MediatR;
+using MeetIQ.Application.Common.Behaviors;
 using MeetIQ.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -21,11 +22,16 @@ namespace MeetIQ.Application.DependencyInjection
 
             // Register FluentValidation
             services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-           // services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+            // Register TransactionBehavior
+            services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
 
             // Mapping
             services.AddAutoMapper(typeof(Meeting).Assembly);
             return services;
+
+
         }
     }
 }

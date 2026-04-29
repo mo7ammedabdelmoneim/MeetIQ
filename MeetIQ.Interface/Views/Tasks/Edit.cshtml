@@ -1,0 +1,372 @@
+﻿@model UpdateTaskViewModel
+@{
+    ViewData["Title"] = "Edit Task";
+}
+
+<!-- ── BREADCRUMB ── -->
+<div class="flex items-center gap-2 text-xs text-slate-500 mb-6">
+    <a href="@Url.Action("Index", "Task")" class="hover:text-slate-300 transition-colors">Tasks</a>
+    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+    <a href="@Url.Action("Details", "Task", new { id = Model.Id })" class="hover:text-slate-300 transition-colors">Details</a>
+    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+    <span class="text-slate-400">Edit</span>
+</div>
+
+<div class="max-w-2xl">
+    <div class="mb-6">
+        <h2 class="text-lg font-semibold text-white tracking-tight">Edit Task</h2>
+        <p class="text-xs text-slate-500 mt-0.5 font-mono">@Model.Id</p>
+    </div>
+
+    <form asp-action="Edit" method="post" class="space-y-5">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+
+        <!-- Validation Summary -->
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+                <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                <div asp-validation-summary="All"></div>
+            </div>
+        }
+
+        <div class="bg-surface-card border border-surface-border rounded-xl p-6 space-y-5">
+
+            <!-- Title -->
+            <div>
+                <label asp-for="Title" class="block text-xs font-semibold text-slate-400 mb-1.5">
+                    Title <span class="text-red-500">*</span>
+                </label>
+                <input asp-for="Title"
+                       class="w-full px-3 py-2.5 bg-surface border border-surface-border rounded-lg
+                              text-sm text-white placeholder-slate-600
+                              focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 transition-colors" />
+                <span asp-validation-for="Title" class="text-xs text-red-400 mt-1 block"></span>
+            </div>
+
+            <!-- Description – Custom Rich Text Editor -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Description</label>
+
+                <div class="rounded-lg border border-surface-border overflow-hidden
+                focus-within:border-brand-600 focus-within:ring-1 focus-within:ring-brand-600/30 transition-colors">
+
+                    <!-- Toolbar -->
+                    <div id="rte-toolbar"
+                         class="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-surface border-b border-surface-border">
+
+                        <select id="rte-heading"
+                                class="bg-surface border border-surface-border text-slate-400 rounded-md px-2 py-1 text-[12px] cursor-pointer outline-none">
+                            <option value="p">Paragraph</option>
+                            <option value="h2">Heading</option>
+                            <option value="h3">Subheading</option>
+                        </select>
+
+                        <span class="w-px h-4 bg-surface-border mx-1"></span>
+
+                        <button type="button" data-cmd="bold" title="Bold"
+                                class="rte-btn font-bold">
+                            B
+                        </button>
+                        <button type="button" data-cmd="italic" title="Italic"
+                                class="rte-btn italic">
+                            I
+                        </button>
+                        <button type="button" data-cmd="underline" title="Underline"
+                                class="rte-btn underline">
+                            U
+                        </button>
+                        <button type="button" data-cmd="strikeThrough" title="Strike"
+                                class="rte-btn line-through">
+                            S
+                        </button>
+
+                        <span class="w-px h-4 bg-surface-border mx-1"></span>
+
+                        <button type="button" data-cmd="insertOrderedList" title="Numbered list" class="rte-btn">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="10" y1="6" x2="21" y2="6" />
+                                <line x1="10" y1="12" x2="21" y2="12" />
+                                <line x1="10" y1="18" x2="21" y2="18" />
+                                <text x="2" y="7" font-size="6" fill="currentColor" stroke="none">1.</text>
+                                <text x="2" y="13" font-size="6" fill="currentColor" stroke="none">2.</text>
+                                <text x="2" y="19" font-size="6" fill="currentColor" stroke="none">3.</text>
+                            </svg>
+                        </button>
+                        <button type="button" data-cmd="insertUnorderedList" title="Bullet list" class="rte-btn">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="9" y1="6" x2="20" y2="6" />
+                                <line x1="9" y1="12" x2="20" y2="12" />
+                                <line x1="9" y1="18" x2="20" y2="18" />
+                                <circle cx="3.5" cy="6" r="1.5" fill="currentColor" stroke="none" />
+                                <circle cx="3.5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                                <circle cx="3.5" cy="18" r="1.5" fill="currentColor" stroke="none" />
+                            </svg>
+                        </button>
+
+                        <span class="w-px h-4 bg-surface-border mx-1"></span>
+
+                        <button type="button" id="rte-link" title="Link" class="rte-btn">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                            </svg>
+                        </button>
+                        <button type="button" data-cmd="formatBlock" data-val="blockquote" title="Quote" class="rte-btn">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zm12 0c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
+                            </svg>
+                        </button>
+                        <button type="button" data-cmd="formatBlock" data-val="pre" title="Code" class="rte-btn">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="16 18 22 12 16 6" />
+                                <polyline points="8 6 2 12 8 18" />
+                            </svg>
+                        </button>
+
+                        <span class="w-px h-4 bg-surface-border mx-1"></span>
+
+                        <button type="button" data-cmd="removeFormat" title="Clear formatting" class="rte-btn">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="4 7 4 4 20 4 20 7" />
+                                <line x1="9" y1="20" x2="15" y2="20" />
+                                <line x1="13" y1="4" x2="11" y2="20" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Editable Area -->
+                    <div id="rte-editor"
+                         contenteditable="true"
+                         spellcheck="true"
+                         data-placeholder="Describe this task…"
+                         class="min-h-[120px] max-h-[320px] overflow-y-auto bg-surface text-slate-300 text-sm px-3 py-2.5 outline-none">
+                    </div>
+                </div>
+
+                <textarea asp-for="Description" id="Description" class="hidden"></textarea>
+            </div>
+            <!-- Priority + Due Date -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="Priority" class="block text-xs font-semibold text-slate-400 mb-1.5">Priority</label>
+                    <select asp-for="Priority"
+                            class="w-full px-3 py-2.5 bg-surface border border-surface-border rounded-lg
+                                   text-sm text-white focus:outline-none focus:border-brand-600 transition-colors cursor-pointer">
+                        @foreach (var p in Enum.GetValues<TaskPriority>())
+                        {
+                            <option value="@p" selected="@(Model.Priority == p)">@p</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label asp-for="DueDate" class="block text-xs font-semibold text-slate-400 mb-1.5">Due Date</label>
+                    <input asp-for="DueDate" type="date"
+                           class="w-full px-3 py-2.5 bg-surface border border-surface-border rounded-lg
+                                  text-sm text-white focus:outline-none focus:border-brand-600 transition-colors
+                                  [color-scheme:dark]" />
+                </div>
+            </div>
+
+            <!-- Meeting — dropdown -->
+            <div>
+                <label asp-for="MeetingId" class="block text-xs font-semibold text-slate-400 mb-1.5">
+                    Link to Meeting
+                    <span class="text-slate-600 font-normal ml-1">(optional)</span>
+                </label>
+                @if (Model.Meetings.Any())
+                {
+                    <div class="relative">
+                        <i data-lucide="video" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                        <select asp-for="MeetingId"
+                                class="w-full pl-9 pr-8 py-2.5 bg-surface border border-surface-border rounded-lg
+                                       text-sm text-white focus:outline-none focus:border-brand-600
+                                       focus:ring-1 focus:ring-brand-600/30 transition-colors cursor-pointer appearance-none">
+                            <option value="">— No meeting —</option>
+                            @foreach (var m in Model.Meetings)
+                            {
+                                <option value="@m.Id" selected="@(Model.MeetingId == m.Id)">@m.Title</option>
+                            }
+                        </select>
+                        <i data-lucide="chevron-down" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-xs text-slate-600 italic py-2">No meetings found for your account.</p>
+                    <input asp-for="MeetingId" type="hidden" value="" />
+                }
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-3">
+            <button type="submit"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500
+                           text-white text-sm font-semibold rounded-lg transition-colors shadow-glow">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                Save Changes
+            </button>
+            <a href="@Url.Action("Details", "Task", new { id = Model.Id })"
+               class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <style>
+        #rte-editor:empty::before {
+            content: attr(data-placeholder);
+            color: #475569;
+            pointer-events: none;
+        }
+
+        #rte-editor a {
+            color: #5a8eff;
+        }
+
+        #rte-editor blockquote {
+            border-left: 3px solid #3366ff;
+            margin: 6px 0;
+            padding: 4px 0 4px 12px;
+            color: #94a3b8;
+            border-radius: 0;
+        }
+
+        #rte-editor pre {
+            background: #0a0d14;
+            border: 1px solid #1f2637;
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: #93c5fd;
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+
+        #rte-editor h2 {
+            font-size: 17px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin: 6px 0 2px;
+        }
+
+        #rte-editor h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin: 4px 0 2px;
+        }
+
+        #rte-editor ul, #rte-editor ol {
+            padding-left: 20px;
+            margin: 4px 0;
+        }
+
+        .rte-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px 7px;
+            border-radius: 6px;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .15s, color .15s;
+        }
+
+            .rte-btn:hover, .rte-btn.active {
+                background: #1f2637;
+                color: #5a8eff;
+            }
+    </style>
+
+    <script>
+        lucide.createIcons();
+
+        const editor = document.getElementById('rte-editor');
+        const toolbar = document.getElementById('rte-toolbar');
+        const heading = document.getElementById('rte-heading');
+
+        // Pre-fill existing content
+        const existing = document.getElementById('Description').value.trim();
+        if (existing) {
+            editor.innerHTML = existing.startsWith('<') ? existing : existing;
+        }
+
+        // Toolbar buttons
+        toolbar.addEventListener('mousedown', e => {
+            const btn = e.target.closest('[data-cmd]');
+            if (!btn) return;
+            e.preventDefault();
+            document.execCommand(btn.dataset.cmd, false, btn.dataset.val || null);
+            editor.focus();
+            syncActive();
+        });
+
+        // Link button
+        document.getElementById('rte-link').addEventListener('mousedown', e => {
+            e.preventDefault();
+            const sel = window.getSelection();
+            const url = prompt('Enter URL:');
+            if (!url) return;
+            if (sel && sel.toString().trim()) {
+                document.execCommand('createLink', false, url);
+            } else {
+                document.execCommand('insertHTML', false, `<a href="${url}">${url}</a>`);
+            }
+            editor.focus();
+        });
+
+        // Heading select
+        heading.addEventListener('change', e => {
+            document.execCommand('formatBlock', false, e.target.value);
+            editor.focus();
+        });
+
+        // Highlight active buttons
+        editor.addEventListener('keyup', syncActive);
+        editor.addEventListener('mouseup', syncActive);
+
+        function syncActive() {
+            toolbar.querySelectorAll('[data-cmd]').forEach(btn => {
+                if (['bold', 'italic', 'underline', 'strikeThrough'].includes(btn.dataset.cmd)) {
+                    btn.classList.toggle('active', document.queryCommandState(btn.dataset.cmd));
+                }
+            });
+        }
+
+        // Plain-text paste only
+        editor.addEventListener('paste', e => {
+            e.preventDefault();
+            document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+        });
+
+        // Sync on every change (not just submit)
+        function syncDescription() {
+            const html = editor.innerHTML;
+            const val = (html === '<br>' || html === '' || html === '<p><br></p>') ? '' : html;
+            document.getElementById('Description').value = val;
+        }
+
+        // Sync continuously
+        editor.addEventListener('input', syncDescription);
+        editor.addEventListener('keyup', syncDescription);
+
+        // Sync on submit as final safety net
+        document.querySelector('form').addEventListener('submit', function (e) {
+            syncDescription();
+        }, { capture: true, once: false });
+    </script>
+}

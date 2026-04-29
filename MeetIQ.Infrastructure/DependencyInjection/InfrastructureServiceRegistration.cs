@@ -1,6 +1,9 @@
-﻿using MeetIQ.Application.Interfaces.Services;
+﻿using MeetIQ.Application.Interfaces;
+using MeetIQ.Application.Interfaces.Repositories;
+using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Domain.Entities;
 using MeetIQ.Infrastructure.Presistence;
+using MeetIQ.Infrastructure.Presistence.Repositories;
 using MeetIQ.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
@@ -50,6 +53,12 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             .AddDefaultTokenProviders();
 
             // Repositories
+            services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<ITaskRepository, TaskRepository>();
+            services.AddScoped<IMeetingRepository, MeetingRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
+
 
 
             // Services

@@ -1,4 +1,5 @@
-﻿using MeetIQ.Application.Features.Auth.Commands.LoginCommand;
+﻿using MeetIQ.Application.Common.Exceptions;
+using MeetIQ.Application.Features.Auth.Commands.LoginCommand;
 using MeetIQ.Application.Features.Auth.Commands.RegisterCommand;
 using MeetIQ.Application.Features.Auth.DTOs;
 using MeetIQ.Application.Interfaces.Services;
@@ -32,38 +33,6 @@ namespace MeetIQ.Infrastructure.Services
             this.roleManager = roleManager;
         }
 
-        //public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
-        //{
-        //    var existingUser = await _userManager.FindByEmailAsync(dto.Email);
-        //    if (existingUser != null)
-        //        throw new Exception("Email already exists");
-
-        //    var user = new ApplicationUser
-        //    {
-        //        FullName = dto.FullName,
-        //        UserName = dto.Email,
-        //        Email = dto.Email
-        //    };
-
-        //    var result = await _userManager.CreateAsync(user, dto.Password);
-
-        //    if (!result.Succeeded)
-        //        throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
-
-        //    if (await roleManager.RoleExistsAsync("User"))
-        //    {
-        //        await _userManager.AddToRoleAsync(user, "User");
-        //    }
-
-        //    return new AuthResponse
-        //    {
-        //        UserId = user.Id,
-        //        Email = user.Email,
-        //        FullName = user.FullName,
-        //        Roles = (await _userManager.GetRolesAsync(user)).ToList()
-        //    };
-        //}
-
         public async Task<AuthResponse> RegisterAsync(RegisterDto dto)
         {
             var existingUser = await _userManager.FindByEmailAsync(dto.Email);
@@ -80,7 +49,7 @@ namespace MeetIQ.Infrastructure.Services
             var result = await _userManager.CreateAsync(user, dto.Password);
 
             if (!result.Succeeded)
-                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
+                throw new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description)));
 
             if (await roleManager.RoleExistsAsync("User"))
             {
@@ -116,11 +85,11 @@ namespace MeetIQ.Infrastructure.Services
 
             var user = await _userManager.FindByEmailAsync(dto.Email);
             if (user == null)
-                throw new Exception("Invalid email or password");
+                throw new BadRequestException("Invalid email or password");
 
             var isValid = await _userManager.CheckPasswordAsync(user, dto.Password);
             if (!isValid)
-                throw new Exception("Invalid email or password");
+                throw new BadRequestException("Invalid email or password");
 
             var roles = await _userManager.GetRolesAsync(user);
 
@@ -164,7 +133,7 @@ namespace MeetIQ.Infrastructure.Services
                 var existingUser = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
 
                 if (existingUser == null)
-                    throw new Exception("User not found");
+                    throw new NotFoundException("User not found");
 
                 await _signInManager.SignOutAsync();
 
@@ -194,7 +163,7 @@ namespace MeetIQ.Infrastructure.Services
 
             var email = info.Principal.FindFirstValue(ClaimTypes.Email);
             if (string.IsNullOrWhiteSpace(email))
-                throw new Exception("Email not provided by external provider");
+                throw new BadRequestException("Email not provided by external provider");
 
             var name = info.Principal.FindFirstValue(ClaimTypes.Name);
 
@@ -216,7 +185,7 @@ namespace MeetIQ.Infrastructure.Services
                 var createResult = await _userManager.CreateAsync(user);
 
                 if (!createResult.Succeeded)
-                    throw new Exception(string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                    throw new BadRequestException(string.Join(", ", createResult.Errors.Select(e => e.Description)));
 
                 if (await roleManager.RoleExistsAsync("User"))
                 {
