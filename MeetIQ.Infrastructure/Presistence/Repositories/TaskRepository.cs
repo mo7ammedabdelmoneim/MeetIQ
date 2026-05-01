@@ -74,5 +74,15 @@ namespace MeetIQ.Infrastructure.Presistence.Repositories
                 PageSize = query.PageSize
             };
         }
-}
+
+
+        public async Task<int> GetPendingTasksCount(string userId)
+        {
+            return await db.Query("TaskItems")
+                .Where("UserId", userId)
+                .Where("Status", (int)Domain.Enums.TaskStatus.ToDo)
+                .Where("IsDeleted", false)
+                .CountAsync<int>();
+        }
+    }
 }

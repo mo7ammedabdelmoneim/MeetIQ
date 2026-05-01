@@ -9,6 +9,7 @@
         public DateTime EndTime { get; set; }
         public string Color { get; set; } = "#3B82F6";   // color-coded type
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; } = false;
 
         public string OwnerId { get; set; } = string.Empty;
         public ApplicationUser Owner { get; set; } = null!;

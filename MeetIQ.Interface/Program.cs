@@ -1,6 +1,5 @@
 using MeetIQ.Application.DependencyInjection;
 using MeetIQ.Infrastructure.DependencyInjection;
-using MeetIQ.Interface.Controllers;
 
 namespace MeetIQ.Interface
 {

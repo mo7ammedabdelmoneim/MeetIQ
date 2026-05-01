@@ -1,4 +1,5 @@
 ﻿using MeetIQ.Domain.Entities;
+using MeetIQ.Infrastructure.Presistence.Configurations;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -34,6 +35,9 @@ namespace MeetIQ.Infrastructure.Presistence
 
             builder.Entity<NoteTag>()
              .HasKey(x => new { x.NoteId, x.TagId });
+
+
+            builder.ApplyConfiguration(new CalendarEventConfiguration());
         }
     }
 }

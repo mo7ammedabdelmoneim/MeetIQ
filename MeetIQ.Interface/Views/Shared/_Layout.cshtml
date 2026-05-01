@@ -173,7 +173,8 @@
             <a href="/Tasks" class="@NavClass("/tasks")">
                 <i data-lucide="check-square" class="@IconClass("/tasks")"></i>
                 Tasks
-                <span class="ml-auto bg-brand-600/20 text-brand-400 text-[11px] font-mono px-1.5 py-0.5 rounded-md">4</span>
+
+                @await Component.InvokeAsync("TasksCount")
             </a>
 
 

@@ -1,0 +1,362 @@
+﻿@{
+    ViewData["Title"] = "Calendar";
+}
+
+<!-- Page header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-xl font-semibold text-white">Calendar</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Manage your events and meetings</p>
+    </div>
+    <a href="/Calendar/Create"
+       class="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500
+              text-white text-sm font-semibold rounded-lg transition-colors shadow-glow">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        New Event
+    </a>
+</div>
+
+<!-- Calendar card -->
+<div class="bg-surface-card border border-surface-border rounded-xl p-5">
+    <div id="calendar" class="min-h-[680px]"></div>
+</div>
+
+<!-- ══ QUICK-CREATE MODAL (click on empty day) ════════════════════════════ -->
+<div id="quickModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-card border border-surface-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-8 h-8 rounded-lg bg-brand-900/60 flex items-center justify-center shrink-0">
+                <i data-lucide="calendar-plus" class="w-4 h-4 text-brand-400"></i>
+            </div>
+            <h3 class="text-white font-semibold text-base">New Event</h3>
+        </div>
+        <p class="text-slate-500 text-xs mb-5 ml-11" id="quickDate"></p>
+        <div class="flex gap-3">
+            <button id="quickCreateBtn"
+                    onclick="goToCreate()"
+                    class="flex-1 px-4 py-2 bg-brand-600 hover:bg-brand-500
+                           text-white text-sm font-semibold rounded-lg transition-colors">
+                Add Event
+            </button>
+            <button onclick="closeQuickModal()"
+                    class="px-4 py-2 border border-surface-border hover:bg-surface-hover
+                           text-slate-400 text-sm rounded-lg transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MORE-EVENTS MODAL (+N more link) ══════════════════════════════════ -->
+<div id="moreModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-card border border-surface-border rounded-xl shadow-2xl w-full max-w-xs mx-4 overflow-hidden">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-surface-border">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-slate-600 font-semibold">Events</p>
+                <p id="moreModalDate" class="text-sm font-semibold text-white mt-0.5"></p>
+            </div>
+            <button onclick="closeMoreModal()"
+                    class="w-7 h-7 flex items-center justify-center rounded-lg
+                           hover:bg-surface-hover text-slate-500 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- Event list -->
+        <div id="moreEventsList" class="px-2 py-2 space-y-0.5 max-h-72 overflow-y-auto">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Footer -->
+        <div class="px-4 py-3 border-t border-surface-border">
+            <button id="moreAddBtn"
+                    onclick="goToCreateFromMore()"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2
+                           border border-dashed border-surface-border hover:border-brand-600
+                           text-slate-500 hover:text-brand-400 text-xs rounded-lg transition-colors">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                Add event on this day
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══ PAST-DATE TOAST ════════════════════════════════════════════════════ -->
+<div id="calToast"
+     class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]
+            flex items-center gap-3 px-4 py-3
+            bg-surface-card border border-red-800/60 rounded-xl shadow-2xl
+            text-sm text-red-300 opacity-0 transition-opacity duration-300 pointer-events-none">
+    <svg class="w-4 h-4 text-red-400 shrink-0" fill="none" stroke="currentColor"
+         stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 8v4m0 4h.01" />
+    </svg>
+    <span id="calToastMsg"></span>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+    <style>
+        :root {
+            --fc-border-color: #1f2637;
+            --fc-button-bg-color: #161b27;
+            --fc-button-border-color: #1f2637;
+            --fc-button-hover-bg-color: #1c2235;
+            --fc-button-hover-border-color: #3366ff;
+            --fc-button-active-bg-color: #3366ff;
+            --fc-button-active-border-color: #3366ff;
+            --fc-today-bg-color: rgba(51,102,255,0.08);
+            --fc-page-bg-color: transparent;
+            --fc-neutral-bg-color: #161b27;
+            --fc-list-event-hover-bg-color: #1c2235;
+            --fc-event-border-color: transparent;
+        }
+
+        .fc {
+            color: #cbd5e1;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .fc-toolbar-title {
+            font-size: 1rem !important;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .fc-col-header-cell {
+            background: #161b27;
+            font-size: 0.75rem;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+
+        .fc-col-header-cell-cushion {
+            color: #64748b !important;
+        }
+
+        .fc-daygrid-day-number {
+            color: #94a3b8 !important;
+            font-size: 0.78rem;
+        }
+
+        .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+            color: #fff !important;
+        }
+
+        .fc-button {
+            font-size: 0.78rem !important;
+            font-weight: 500 !important;
+            border-radius: 8px !important;
+        }
+
+        .fc-event {
+            border-radius: 6px !important;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            cursor: pointer;
+        }
+
+        .fc-event-title {
+            font-weight: 500;
+        }
+
+        /* "+N more" pill badge */
+        .fc-more-link {
+            display: inline-flex !important;
+            align-items: center;
+            font-size: 0.7rem !important;
+            font-weight: 600 !important;
+            color: #5a8eff !important;
+            background: rgba(51,102,255,0.12);
+            border: 1px solid rgba(51,102,255,0.2);
+            border-radius: 99px;
+            padding: 1px 8px !important;
+            margin-top: 2px;
+            transition: background 0.15s, border-color 0.15s;
+            text-decoration: none !important;
+        }
+
+            .fc-more-link:hover {
+                background: rgba(51,102,255,0.22) !important;
+                border-color: rgba(51,102,255,0.4) !important;
+                color: #8eb6ff !important;
+            }
+
+        /* Suppress the default popover — we use our own modal */
+        .fc-popover {
+            display: none !important;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const cal = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                },
+                height: 'auto',
+                firstDay: 1,
+                nowIndicator: true,
+                dayMaxEvents: 3,
+                navLinks: true,
+
+                events: {
+                    url: '/Calendar/Events',
+                    method: 'GET',
+                    failure: () => console.error('Failed to load calendar events')
+                },
+
+                // Event click → details page
+                eventClick: function (info) {
+                    window.location.href = '/Calendar/Details/' + info.event.id;
+                },
+
+                // Empty day click → quick-create modal (past days blocked)
+                dateClick: function (info) {
+                    const date = info.dateStr;          // "YYYY-MM-DD"
+                    const clicked = new Date(date + 'T00:00:00');
+                    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+                    if (clicked < today) {
+                        showToast('Cannot create events in the past.');
+                        return;
+                    }
+
+                    // Default start = 09:00, but if today pick current time rounded up 15 min
+                    let startHH = '09', startMM = '00';
+                    if (clicked.getTime() === today.getTime()) {
+                        const now = new Date();
+                        const mins = Math.ceil((now.getMinutes() + 1) / 15) * 15;
+                        const h = mins >= 60 ? now.getHours() + 1 : now.getHours();
+                        const m = mins >= 60 ? 0 : mins;
+                        startHH = String(h).padStart(2, '0');
+                        startMM = String(m).padStart(2, '0');
+                    }
+                    const endHH = String(parseInt(startHH) + 1).padStart(2, '0');
+
+                    const display = clicked.toLocaleDateString('en-US', {
+                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                    });
+
+                    document.getElementById('quickDate').textContent = display;
+
+                    const btn = document.getElementById('quickCreateBtn');
+                    btn.dataset.start = date + 'T' + startHH + ':' + startMM;
+                    btn.dataset.end = date + 'T' + endHH + ':' + startMM;
+
+                    document.getElementById('quickModal').classList.remove('hidden');
+                },
+
+                // "+N more" → custom modal with full event list
+                moreLinkClick: function (info) {
+                    const date = info.date;
+                    const dateStr = date.toISOString().substring(0, 10);
+                    const label = date.toLocaleDateString('en-US', {
+                        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+                    });
+
+                    // Build the event list
+                    const list = document.getElementById('moreEventsList');
+                    list.innerHTML = '';
+
+                    info.allSegs.map(s => s.event).forEach(function (ev) {
+                        const fmt = { hour: '2-digit', minute: '2-digit', hour12: false };
+                        const tS = ev.start ? ev.start.toLocaleTimeString('en-US', fmt) : null;
+                        const tE = ev.end ? ev.end.toLocaleTimeString('en-US', fmt) : null;
+                        const clr = ev.backgroundColor || '#3366ff';
+
+                        const a = document.createElement('a');
+                        a.href = '/Calendar/Details/' + ev.id;
+                        a.className =
+                            'flex items-center gap-3 px-3 py-2.5 rounded-lg ' +
+                            'hover:bg-surface-hover transition-colors group';
+
+                        a.innerHTML =
+                            '<span class="w-2 h-2 rounded-full shrink-0" style="background:' + clr + '"></span>' +
+                            '<div class="min-w-0 flex-1">' +
+                            '<p class="text-sm text-white font-medium truncate group-hover:text-brand-300 transition-colors">'
+                            + ev.title + '</p>' +
+                            (tS ? '<p class="text-[11px] text-slate-500 mt-0.5">' + tS + (tE ? ' – ' + tE : '') + '</p>' : '') +
+                            '</div>' +
+                            '<svg class="w-3 h-3 text-slate-600 group-hover:text-brand-400 shrink-0 transition-colors" ' +
+                            'fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">' +
+                            '<path d="M9 18l6-6-6-6"/></svg>';
+
+                        list.appendChild(a);
+                    });
+
+                    document.getElementById('moreModalDate').textContent = label;
+                    document.getElementById('moreAddBtn').dataset.date = dateStr;
+                    document.getElementById('moreModal').classList.remove('hidden');
+
+                    return 'none'; // suppress default popover
+                }
+            });
+
+            cal.render();
+        });
+
+        // ── Quick-create ─────────────────────────────────────────────────────
+        function goToCreate() {
+            const btn = document.getElementById('quickCreateBtn');
+            window.location.href =
+                '/Calendar/Create?start=' + encodeURIComponent(btn.dataset.start || '') +
+                '&end=' + encodeURIComponent(btn.dataset.end || '');
+        }
+
+        function closeQuickModal() {
+            document.getElementById('quickModal').classList.add('hidden');
+        }
+
+        // ── More-modal ───────────────────────────────────────────────────────
+        function goToCreateFromMore() {
+            const date = document.getElementById('moreAddBtn').dataset.date || '';
+            const clicked = new Date(date + 'T00:00:00');
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            if (clicked < today) {
+                showToast('Cannot create events in the past.');
+                return;
+            }
+
+            window.location.href =
+                '/Calendar/Create?start=' + encodeURIComponent(date + 'T09:00') +
+                '&end=' + encodeURIComponent(date + 'T10:00');
+        }
+
+        function closeMoreModal() {
+            document.getElementById('moreModal').classList.add('hidden');
+        }
+
+        // ── Past-date toast ──────────────────────────────────────────────────
+        function showToast(msg) {
+            const t = document.getElementById('calToast');
+            t.querySelector('#calToastMsg').textContent = msg;
+            t.classList.remove('hidden', 'opacity-0');
+            t.classList.add('opacity-100');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(function () {
+                t.classList.remove('opacity-100');
+                t.classList.add('opacity-0');
+                setTimeout(() => t.classList.add('hidden'), 300);
+            }, 3000);
+        }
+
+        // Backdrop click closes either modal
+        ['quickModal', 'moreModal'].forEach(function (id) {
+            document.getElementById(id).addEventListener('click', function (e) {
+                if (e.target === this) this.classList.add('hidden');
+            });
+        });
+    </script>
+}

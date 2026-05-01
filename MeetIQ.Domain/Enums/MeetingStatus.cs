@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace MeetIQ.Domain.Enums
 {
-    public enum MeetingStatus { Scheduled, Live, Ended, Cancelled }
+    public enum MeetingStatus { Scheduled, InProgress, Live, Ended, Cancelled }
 }

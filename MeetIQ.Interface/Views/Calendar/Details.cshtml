@@ -1,0 +1,143 @@
+﻿@model CalendarEventDetailsDto
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="max-w-2xl mx-auto">
+
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-slate-500 mb-6">
+        <a href="/Calendar" class="hover:text-white transition-colors">Calendar</a>
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        <span class="text-slate-300">@Model.Title</span>
+    </nav>
+
+    <!-- Success toast -->
+    @if (TempData["Success"] is string msg)
+    {
+        <div class="flex items-center gap-3 mb-4 px-4 py-3 bg-emerald-900/40 border border-emerald-700/50
+                    text-emerald-300 text-sm rounded-lg">
+            <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
+            @msg
+        </div>
+    }
+
+    <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+
+        <!-- Color bar -->
+        <div class="h-1.5 w-full" style="background: @Model.Color"></div>
+
+        <div class="p-6 space-y-5">
+
+            <!-- Title row -->
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="w-3 h-3 rounded-full shrink-0" style="background: @Model.Color"></span>
+                    <h2 class="text-xl font-semibold text-white truncate">@Model.Title</h2>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <a href="/Calendar/Edit/@Model.Id"
+                       class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300
+                              border border-surface-border hover:border-brand-600 hover:text-white
+                              rounded-lg transition-colors">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        Edit
+                    </a>
+                    <button onclick="document.getElementById('deleteModal').classList.remove('hidden')"
+                            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-400
+                                   border border-surface-border hover:border-red-600 hover:bg-red-900/20
+                                   rounded-lg transition-colors">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        Delete
+                    </button>
+                </div>
+            </div>
+
+            <!-- Time row -->
+            <div class="flex items-center gap-6 text-sm text-slate-400">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-4 h-4 text-brand-400"></i>
+                    <span>@Model.StartTime.ToString("dddd, MMMM d, yyyy")</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4 text-brand-400"></i>
+                    <span>@Model.StartTime.ToString("HH:mm") – @Model.EndTime.ToString("HH:mm")</span>
+                </div>
+                @{
+                    var duration = Model.EndTime - Model.StartTime;
+                    var durStr = duration.TotalHours >= 1
+                    ? $"{(int)duration.TotalHours}h {duration.Minutes}m"
+                    : $"{duration.Minutes}m";
+                }
+                <span class="text-slate-600">(@durStr)</span>
+            </div>
+
+            <!-- Description -->
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <div class="bg-surface border border-surface-border rounded-lg px-4 py-3">
+                    <p class="text-sm text-slate-300 leading-relaxed whitespace-pre-line">@Model.Description</p>
+                </div>
+            }
+
+            <!-- Linked meeting -->
+            @if (Model.MeetingId.HasValue)
+            {
+                <div class="flex items-center gap-3 px-4 py-3 bg-brand-950/60 border border-brand-800/40
+                            rounded-lg text-sm">
+                    <i data-lucide="video" class="w-4 h-4 text-brand-400 shrink-0"></i>
+                    <span class="text-slate-400">Linked Meeting:</span>
+                    <a href="/Meetings/Details/@Model.MeetingId"
+                       class="text-brand-400 hover:text-brand-300 font-medium transition-colors">
+                        @(Model.MeetingTitle ?? "View Meeting")
+                    </a>
+                </div>
+            }
+
+            <!-- Meta footer -->
+            <div class="pt-2 border-t border-surface-border text-xs text-slate-600">
+                Created @Model.CreatedAt.ToString("MMM d, yyyy 'at' HH:mm") UTC
+            </div>
+        </div>
+    </div>
+
+    <!-- Back link -->
+    <div class="mt-4">
+        <a href="/Calendar" class="flex items-center gap-1.5 text-sm text-slate-500 hover:text-white transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Back to Calendar
+        </a>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="deleteModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-card border border-surface-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-9 h-9 rounded-full bg-red-900/40 flex items-center justify-center">
+                <i data-lucide="trash-2" class="w-4 h-4 text-red-400"></i>
+            </div>
+            <h3 class="text-white font-semibold">Delete Event</h3>
+        </div>
+        <p class="text-sm text-slate-400 mb-6">
+            Are you sure you want to delete <span class="text-white font-medium">"@Model.Title"</span>?
+            This action cannot be undone.
+        </p>
+        <div class="flex gap-3">
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="flex-1">
+                @Html.AntiForgeryToken()
+                <button type="submit"
+                        class="w-full px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm
+                               font-semibold rounded-lg transition-colors">
+                    Delete
+                </button>
+            </form>
+            <button onclick="document.getElementById('deleteModal').classList.add('hidden')"
+                    class="flex-1 px-4 py-2 border border-surface-border hover:bg-surface-hover
+                           text-slate-400 text-sm rounded-lg transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>

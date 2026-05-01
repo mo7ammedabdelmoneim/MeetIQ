@@ -57,13 +57,19 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ITaskRepository, TaskRepository>();
             services.AddScoped<IMeetingRepository, MeetingRepository>();
+            services.AddScoped<IMeetingParticipantRepository, MeetingParticipantRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
+            //services.AddScoped<INoteRepository, NoteRepository>();
+            services.AddScoped<ITagRepository, TagRepository>();
+            services.AddScoped<INoteTagRepository, NoteTagRepository>();
+            services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
 
 
 
             // Services
             services.AddScoped<IAuthService, AuthService>();
-
+            services.AddScoped<INoteService, NoteService>();
+            services.AddSingleton<JitsiTokenService>();
 
             return services;
         }

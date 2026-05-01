@@ -1,0 +1,94 @@
+﻿@* @model CreateMeetingCommand
+
+<h2>Create Meeting</h2>
+
+<form asp-action="Create" method="post">
+
+    <div>
+        <label>Title</label>
+        <input asp-for="Title" />
+        <span asp-validation-for="Title"></span>
+    </div>
+
+    <div>
+        <label>Scheduled At</label>
+        <input asp-for="ScheduledAt" type="datetime-local" />
+        <span asp-validation-for="ScheduledAt"></span>
+    </div>
+
+    <button type="submit">Create Meeting</button>
+
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+} *@
+
+@model CreateMeetingViewModel
+@{
+    ViewData["Title"] = "New Meeting";
+}
+
+<div class="max-w-xl mx-auto">
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-8">
+
+        <!-- Header -->
+        <div class="flex items-center gap-4 mb-8">
+            <div class="w-12 h-12 rounded-xl bg-brand-900/30 border border-brand-800/30 flex items-center justify-center">
+                <i data-lucide="video" class="w-6 h-6 text-brand-400"></i>
+            </div>
+            <div>
+                <h2 class="text-white font-semibold text-lg">New Meeting</h2>
+                <p class="text-slate-500 text-sm">Schedule a video call for your team</p>
+            </div>
+        </div>
+
+        <form asp-action="Create" method="post" class="space-y-5">
+            @Html.AntiForgeryToken()
+
+            <!-- Title -->
+            <div>
+                <label asp-for="Title" class="block text-xs font-medium text-slate-400 mb-1.5"></label>
+                <input asp-for="Title" placeholder="e.g. Q3 Planning, Design Review…"
+                       class="w-full bg-surface border border-surface-border focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30
+                              rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none transition-colors" />
+                <span asp-validation-for="Title" class="text-xs text-red-400 mt-1 block"></span>
+            </div>
+
+            <!-- Scheduled At -->
+            <div>
+                <label asp-for="ScheduledAt" class="block text-xs font-medium text-slate-400 mb-1.5"></label>
+                <input asp-for="ScheduledAt" type="datetime-local"
+                       class="w-full bg-surface border border-surface-border focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30
+                              rounded-xl px-4 py-2.5 text-sm text-white outline-none transition-colors" />
+                <span asp-validation-for="ScheduledAt" class="text-xs text-red-400 mt-1 block"></span>
+            </div>
+
+            <!-- Info box -->
+            <div class="flex gap-3 bg-brand-950/40 border border-brand-900/40 rounded-xl p-4">
+                <i data-lucide="info" class="w-4 h-4 text-brand-400 shrink-0 mt-0.5"></i>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    A unique Jitsi video room will be created automatically.
+                    Share the join link with participants after creating the meeting.
+                </p>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-3 pt-2">
+                <a asp-action="Index" class="flex-1 text-center px-4 py-2.5 rounded-xl border border-surface-border text-slate-400 hover:text-white hover:border-slate-500 text-sm font-medium transition-colors">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-glow">
+                    <i data-lucide="calendar-plus" class="w-4 h-4"></i>
+                    Schedule Meeting
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>lucide.createIcons();</script>
+}

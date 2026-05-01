@@ -9,5 +9,7 @@ namespace MeetIQ.Application.Interfaces.Repositories
     {
         Task<TaskDetailsDto?> GetByIdAsync(Guid id);
         Task<PagedResult<TaskListItemDto>> GetTasksAsync(GetTasksQuery query);
+        Task<int> GetPendingTasksCount(string userId);
+
     }
 }
