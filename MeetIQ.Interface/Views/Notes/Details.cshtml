@@ -1,5 +1,4 @@
-﻿@using MeetIQ.Application.Interfaces.Services
-@model NoteDetailViewModel
+﻿@model NoteDetailViewModel
 @{
     ViewData["Title"] = Model.Title;
 }
@@ -61,14 +60,13 @@
                 </div>
             </div>
 
-            <!-- Rich-text content -->
-            <div class="px-6 py-6 prose prose-sm prose-invert max-w-none
-                        prose-headings:text-slate-200 prose-p:text-slate-400 prose-a:text-brand-400
-                        prose-strong:text-slate-300 prose-code:text-brand-300 prose-code:bg-surface-border
-                        prose-pre:bg-surface-border prose-blockquote:border-brand-600 prose-blockquote:text-slate-400
-                        prose-li:text-slate-400 prose-hr:border-surface-border">
-                @Html.Raw(Model.Content)
+            <!-- ── Rich-text content (Quill read-only render) ── -->
+            <div class="ql-snow px-6 py-6">
+                <div class="ql-editor note-content">
+                    @Html.Raw(Model.Content)
+                </div>
             </div>
+
         </div>
     </article>
 
@@ -146,8 +144,7 @@
         <!-- Quick actions -->
         <div class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-2">
             <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Actions</h3>
-            <a asp-action="Create"
-               asp-route-meetingId="@Model.MeetingId"
+            <a asp-action="Create" asp-route-meetingId="@Model.MeetingId"
                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-surface-hover transition-colors">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 New Note
@@ -193,5 +190,111 @@
 </div>
 
 @section Scripts {
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet" />
+
+    <style>
+        /* Override Quill snow borders — read-only display only */
+        .ql-snow.ql-toolbar {
+            display: none;
+        }
+
+        .ql-container.ql-snow {
+            border: none !important;
+        }
+
+        /* Dark theme for note content */
+        .note-content {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            line-height: 1.75;
+            color: #cbd5e1;
+            padding: 0 !important; /* remove quill default padding — parent px-6 py-6 handles it */
+            min-height: unset !important;
+        }
+
+            .note-content h1 {
+                font-size: 1.5rem;
+                font-weight: 600;
+                color: #f1f5f9;
+                margin-bottom: 0.75rem;
+            }
+
+            .note-content h2 {
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: #f1f5f9;
+                margin-bottom: 0.5rem;
+            }
+
+            .note-content h3 {
+                font-size: 1.1rem;
+                font-weight: 600;
+                color: #e2e8f0;
+                margin-bottom: 0.5rem;
+            }
+
+            .note-content p {
+                margin-bottom: 0.75rem;
+                color: #94a3b8;
+            }
+
+            .note-content a {
+                color: #5a8eff;
+                text-decoration: underline;
+            }
+
+                .note-content a:hover {
+                    color: #8eb6ff;
+                }
+
+            .note-content strong {
+                color: #e2e8f0;
+                font-weight: 600;
+            }
+
+            .note-content em {
+                color: #94a3b8;
+            }
+
+            .note-content ul, .note-content ol {
+                padding-left: 1.5rem;
+                margin-bottom: 0.75rem;
+                color: #94a3b8;
+            }
+
+            .note-content li {
+                margin-bottom: 0.25rem;
+            }
+
+            .note-content blockquote {
+                border-left: 3px solid #3366ff;
+                padding-left: 1rem;
+                margin: 1rem 0;
+                color: #64748b;
+                font-style: italic;
+            }
+
+            .note-content pre.ql-syntax {
+                background: #0f1117;
+                border: 1px solid #1f2637;
+                border-radius: 8px;
+                color: #94a3b8;
+                padding: 1rem;
+                font-family: 'DM Mono', monospace;
+                font-size: 13px;
+                overflow-x: auto;
+                margin: 0.75rem 0;
+            }
+
+            .note-content code {
+                background: #1f2637;
+                color: #8eb6ff;
+                padding: 0.15rem 0.4rem;
+                border-radius: 4px;
+                font-family: 'DM Mono', monospace;
+                font-size: 13px;
+            }
+    </style>
+
     <script>lucide.createIcons();</script>
 }

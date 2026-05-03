@@ -4,7 +4,6 @@ using MeetIQ.Application.Interfaces.Repositories;
 
 namespace MeetIQ.Application.Features.Calendar.Commands.UpdateCalendarEventCommand
 {
-    // ── Handler ───────────────────────────────────────────────────────────────
     public class UpdateCalendarEventCommandHandler
         : IRequestHandler<UpdateCalendarEventCommand, Unit>
     {

@@ -2,7 +2,7 @@
 using MeetIQ.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
-namespace MeetIQ.Interface.ViewModels
+namespace MeetIQ.Interface.ViewModels.Tasks
 {
     public class UpdateTaskViewModel
     {

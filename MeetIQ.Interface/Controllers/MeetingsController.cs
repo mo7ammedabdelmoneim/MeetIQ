@@ -7,6 +7,8 @@ using System.Security.Claims;
 using MeetIQ.Infrastructure.Services;
 using MeetIQ.Interface.ViewModels;
 using MeetIQ.Infrastructure.Presistence;
+using MeetIQ.Interface.ViewModels.Mettings;
+using MeetIQ.Interface.ViewModels.Calendar;
 
 namespace MeetIQ.Interface.Controllers
 {
@@ -30,7 +32,7 @@ namespace MeetIQ.Interface.Controllers
         private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         private string CurrentUserName => User.Identity?.Name ?? "User";
 
-        // ─── INDEX ───────────────────────────────────────────────────────────────
+        // INDEX 
         public async Task<IActionResult> Index()
         {
             var meetings = await _db.Meetings
@@ -44,7 +46,7 @@ namespace MeetIQ.Interface.Controllers
             return View(meetings);
         }
 
-        // ─── DETAILS ─────────────────────────────────────────────────────────────
+        // DETAILS 
         public async Task<IActionResult> Details(Guid id)
         {
             var meeting = await _db.Meetings
@@ -66,7 +68,7 @@ namespace MeetIQ.Interface.Controllers
             return View(meeting);
         }
 
-        // ─── CREATE ──────────────────────────────────────────────────────────────
+        // CREATE 
         public IActionResult Create() => View(new CreateMeetingViewModel());
 
         [HttpPost, ValidateAntiForgeryToken]
@@ -103,7 +105,7 @@ namespace MeetIQ.Interface.Controllers
             return RedirectToAction(nameof(Details), new { id = meetingId });
         }
 
-        // ─── JOIN ────────────────────────────────────────────────────────────────
+        // JOIN 
         public async Task<IActionResult> Join(Guid id)
         {
             // Load meeting WITHOUT tracking participants — we manage them separately
@@ -123,7 +125,7 @@ namespace MeetIQ.Interface.Controllers
 
             bool isHost = meeting.HostId == CurrentUserId;
 
-            // ── Handle participant registration independently ──────────────────
+            
             // Check if this user already has a participant record
             var existingParticipant = await _db.MeetingParticipants
                 .FirstOrDefaultAsync(p => p.MeetingId == id && p.UserId == CurrentUserId);
@@ -149,7 +151,7 @@ namespace MeetIQ.Interface.Controllers
                 _db.MeetingParticipants.Update(existingParticipant);
             }
 
-            // ── Update meeting status if host is joining for the first time ────
+            // Update meeting status if host is joining for the first time 
             if (isHost && meeting.StartedAt == null)
             {
                 await _db.Meetings
@@ -161,7 +163,7 @@ namespace MeetIQ.Interface.Controllers
 
             await _db.SaveChangesAsync();
 
-            // ── Build Jitsi token if configured ───────────────────────────────
+            // Build Jitsi token if configured 
             string? token = null;
             if (_config.GetValue<bool>("Jitsi:UseToken"))
             {
@@ -185,9 +187,7 @@ namespace MeetIQ.Interface.Controllers
             return View(vm);
         }
 
-        // ─── END (host only) ─────────────────────────────────────────────────────
-        // FIX: Use ExecuteUpdateAsync to avoid concurrency issues.
-        //      RedirectToAction uses explicit string key to avoid C# tuple ambiguity.
+     
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> End(Guid id)
         {
@@ -229,7 +229,7 @@ namespace MeetIQ.Interface.Controllers
             return RedirectToAction(nameof(Details), new { id = id.ToString() });
         }
 
-        // ─── LEAVE (participant) ──────────────────────────────────────────────────
+        // LEAVE (participant) 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Leave(Guid id)
         {
@@ -241,7 +241,7 @@ namespace MeetIQ.Interface.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ─── DELETE (host only) ───────────────────────────────────────────────────
+        // DELETE (host only) 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -261,7 +261,7 @@ namespace MeetIQ.Interface.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ─── HELPERS ─────────────────────────────────────────────────────────────
+        // HELPERS 
         private static string GenerateRoomId(string title)
         {
             var slug = new string(

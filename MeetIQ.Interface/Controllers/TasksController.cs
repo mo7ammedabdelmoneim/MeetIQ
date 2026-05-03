@@ -8,7 +8,7 @@ using MeetIQ.Application.Features.Tasks.DTOs;
 using MeetIQ.Application.Features.Tasks.Queries.GetTaskByIdQuery;
 using MeetIQ.Application.Features.Tasks.Queries.GetTasksQuery;
 using MeetIQ.Domain.Enums;
-using MeetIQ.Interface.ViewModels;
+using MeetIQ.Interface.ViewModels.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;

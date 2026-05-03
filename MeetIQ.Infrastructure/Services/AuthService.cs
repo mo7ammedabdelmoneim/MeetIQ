@@ -4,17 +4,9 @@ using MeetIQ.Application.Features.Auth.Commands.RegisterCommand;
 using MeetIQ.Application.Features.Auth.DTOs;
 using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Domain.Entities;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Infrastructure.Services
 {

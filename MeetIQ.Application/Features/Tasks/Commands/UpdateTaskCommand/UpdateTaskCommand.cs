@@ -1,11 +1,6 @@
 ﻿using MediatR;
 using MeetIQ.Application.Interfaces;
 using MeetIQ.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Application.Features.Tasks.Commands.UpdateTaskCommand
 {

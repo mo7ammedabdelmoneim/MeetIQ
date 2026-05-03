@@ -1,11 +1,6 @@
 ﻿using MediatR;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Application.Features.Meetings.Queries.GetMeetingByIdQuery
 {

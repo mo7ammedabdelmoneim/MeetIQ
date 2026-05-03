@@ -2,7 +2,6 @@
 
 namespace MeetIQ.Application.Features.Calendar.Commands.UpdateCalendarEventCommand
 {
-    // ── Validator ─────────────────────────────────────────────────────────────
     public class UpdateCalendarEventCommandValidator
         : AbstractValidator<UpdateCalendarEventCommand>
     {

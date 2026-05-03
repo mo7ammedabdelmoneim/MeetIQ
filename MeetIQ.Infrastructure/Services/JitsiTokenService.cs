@@ -1,21 +1,12 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Infrastructure.Services
 {
-    /// <summary>
-    /// Generates signed JWTs for Jitsi self-hosted / JaaS authentication.
-    /// For the public meet.jit.si, set Jitsi:UseToken = false and skip this.
-    /// For JaaS (8x8.vc), set Jitsi:UseToken = true and fill in the config.
-    /// </summary>
     public class JitsiTokenService
     {
         private readonly IConfiguration _config;

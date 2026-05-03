@@ -1,7 +1,7 @@
-﻿using MeetIQ.Domain.Entities;
+﻿using MeetIQ.Interface.ViewModels.Calendar;
 using System.ComponentModel.DataAnnotations;
 
-namespace MeetIQ.Interface.ViewModels
+namespace MeetIQ.Interface.ViewModels.Mettings
 {
     public class CreateMeetingViewModel
     {
@@ -15,5 +15,5 @@ namespace MeetIQ.Interface.ViewModels
         public DateTime ScheduledAt { get; set; } = DateTime.Now.AddHours(1);
     }
 
-    
+
 }

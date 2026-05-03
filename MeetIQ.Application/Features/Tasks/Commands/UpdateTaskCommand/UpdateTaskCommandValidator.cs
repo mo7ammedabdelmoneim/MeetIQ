@@ -1,9 +1,4 @@
 ﻿using FluentValidation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Application.Features.Tasks.Commands.UpdateTaskCommand
 {
@@ -24,16 +19,13 @@ namespace MeetIQ.Application.Features.Tasks.Commands.UpdateTaskCommand
                 .When(x => x.Description != null);
 
             RuleFor(x => x.DueDate)
-                .GreaterThan(DateTime.UtcNow)
-                .When(x => x.DueDate.HasValue);
+                .Must(date => date!.Value.Date >= DateTime.UtcNow.Date)
+                .When(x => x.DueDate.HasValue)
+                .WithMessage("DueDate must be today or in the future");
 
             RuleFor(x => x.Priority)
                 .IsInEnum()
                 .When(x => x.Priority.HasValue);
-
-            //RuleFor(x => x.AssigneeId)
-            //    .NotEmpty()
-            //    .When(x => x.AssigneeId != null);
         }
     }
 }

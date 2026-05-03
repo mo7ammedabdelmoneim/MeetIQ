@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MeetIQ.Application.Features.Tasks.DTOs
+﻿namespace MeetIQ.Application.Features.Tasks.DTOs
 {
     public class MeetingSelectDto
     {

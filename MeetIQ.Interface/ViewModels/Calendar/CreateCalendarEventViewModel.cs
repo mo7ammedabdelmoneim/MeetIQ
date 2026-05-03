@@ -24,12 +24,6 @@ namespace MeetIQ.Interface.ViewModels.Calendar
         [Display(Name = "Link to Meeting (optional)")]
         public Guid? MeetingId { get; set; }
 
-        // Populated by controller – not posted
         public List<SelectListItem> Meetings { get; set; } = new();
-    }
-
-    public class EditCalendarEventViewModel : CreateCalendarEventViewModel
-    {
-        public Guid Id { get; set; }
     }
 }

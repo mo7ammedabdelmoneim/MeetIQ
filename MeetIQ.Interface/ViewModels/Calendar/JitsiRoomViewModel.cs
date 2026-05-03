@@ -1,6 +1,6 @@
 ﻿using MeetIQ.Domain.Entities;
 
-namespace MeetIQ.Interface.ViewModels
+namespace MeetIQ.Interface.ViewModels.Calendar
 {
     public class JitsiRoomViewModel
     {

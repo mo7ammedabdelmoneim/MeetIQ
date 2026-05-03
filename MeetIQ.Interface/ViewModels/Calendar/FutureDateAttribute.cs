@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace MeetIQ.Interface.ViewModels
+namespace MeetIQ.Interface.ViewModels.Calendar
 {
     public class FutureDateAttribute : ValidationAttribute
     {

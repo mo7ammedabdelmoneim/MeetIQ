@@ -1,9 +1,9 @@
-﻿// ── Command ───────────────────────────────────────────────────────────────────
-using MediatR;
+﻿using MediatR;
+using MeetIQ.Application.Interfaces;
 
 namespace MeetIQ.Application.Features.Calendar.Commands.CreateCalendarEventCommand
 {
-    public class CreateCalendarEventCommand : IRequest<Guid>
+    public class CreateCalendarEventCommand : ICommand<Guid>
     {
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }

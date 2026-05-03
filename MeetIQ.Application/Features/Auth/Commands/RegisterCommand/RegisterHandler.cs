@@ -1,6 +1,4 @@
-﻿
-
-using MediatR;
+﻿using MediatR;
 using MeetIQ.Application.Features.Auth.DTOs;
 using MeetIQ.Application.Interfaces.Services;
 

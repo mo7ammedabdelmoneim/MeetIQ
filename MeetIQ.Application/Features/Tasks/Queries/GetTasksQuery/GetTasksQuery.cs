@@ -2,11 +2,6 @@
 using MeetIQ.Application.Common.Results;
 using MeetIQ.Application.Features.Tasks.DTOs;
 using MeetIQ.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Application.Features.Tasks.Queries.GetTasksQuery
 {

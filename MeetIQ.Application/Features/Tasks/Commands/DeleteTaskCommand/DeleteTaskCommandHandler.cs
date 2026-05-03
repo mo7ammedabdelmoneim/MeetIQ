@@ -1,12 +1,6 @@
 ﻿using MediatR;
 using MeetIQ.Application.Common.Exceptions;
 using MeetIQ.Application.Interfaces.Repositories;
-using MeetIQ.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Application.Features.Tasks.Commands.DeleteTaskCommand
 {
@@ -29,10 +23,6 @@ namespace MeetIQ.Application.Features.Tasks.Commands.DeleteTaskCommand
             // already deleted
             if (task.IsDeleted)
                 throw new BadRequestException("Task already deleted");
-
-            // optional rule
-            if (task.Status == Domain.Enums.TaskStatus.Done)
-                throw new BadRequestException("Cannot delete completed task");
 
             // Soft delete
             task.IsDeleted = true;

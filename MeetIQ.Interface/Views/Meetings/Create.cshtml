@@ -1,30 +1,4 @@
-﻿@* @model CreateMeetingCommand
-
-<h2>Create Meeting</h2>
-
-<form asp-action="Create" method="post">
-
-    <div>
-        <label>Title</label>
-        <input asp-for="Title" />
-        <span asp-validation-for="Title"></span>
-    </div>
-
-    <div>
-        <label>Scheduled At</label>
-        <input asp-for="ScheduledAt" type="datetime-local" />
-        <span asp-validation-for="ScheduledAt"></span>
-    </div>
-
-    <button type="submit">Create Meeting</button>
-
-</form>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-} *@
-
-@model CreateMeetingViewModel
+﻿@model CreateMeetingViewModel
 @{
     ViewData["Title"] = "New Meeting";
 }

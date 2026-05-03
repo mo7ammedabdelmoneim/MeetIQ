@@ -16,9 +16,11 @@ namespace MeetIQ.Application.Features.Tasks.Commands.CreateTaskCommand
                 .When(x => !string.IsNullOrEmpty(x.Description));
 
             RuleFor(x => x.DueDate)
-                .GreaterThan(DateTime.UtcNow)
+                .Must(date => date!.Value.Date >= DateTime.UtcNow.Date)
                 .When(x => x.DueDate.HasValue)
-                .WithMessage("DueDate must be in the future");
+                .WithMessage("DueDate must be today or in the future");
+
+
 
             RuleFor(x => x.Priority)
                 .IsInEnum()

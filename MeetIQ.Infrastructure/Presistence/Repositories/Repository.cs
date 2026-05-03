@@ -1,12 +1,7 @@
 ﻿using MeetIQ.Application.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SqlKata.Execution;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Infrastructure.Presistence.Repositories
 {

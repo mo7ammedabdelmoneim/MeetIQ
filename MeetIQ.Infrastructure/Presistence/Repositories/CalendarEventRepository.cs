@@ -2,7 +2,6 @@
 using MeetIQ.Application.Features.Calendar.Queries.GetCalendarEventsQuery;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Domain.Entities;
-using MeetIQ.Infrastructure.Presistence;
 using SqlKata.Execution;
 
 namespace MeetIQ.Infrastructure.Presistence.Repositories
@@ -12,8 +11,6 @@ namespace MeetIQ.Infrastructure.Presistence.Repositories
     {
         public CalendarEventRepository(ApplicationDbContext context, QueryFactory db)
             : base(context, db) { }
-
-        // ── READ: Dapper + SqlKata ─────────────────────────────────────────────
 
         public async Task<IReadOnlyList<CalendarEventDto>> GetEventsAsync(
             GetCalendarEventsQuery query)
@@ -61,6 +58,16 @@ namespace MeetIQ.Infrastructure.Presistence.Repositories
                 .Where("ce.OwnerId", ownerId)
                 .Where("ce.IsDeleted", false)
                 .FirstOrDefaultAsync<CalendarEventDetailsDto>();
+        }
+
+        public async Task<IEnumerable<CalendarEventSelectDto>> GetUserEventsForSelectAsync(string userId)
+        {
+            return await db.Query("CalendarEvents")
+                .Select("Id", "Title")
+                .Where("OwnerId", userId)
+                .Where("IsDeleted", false)
+                .OrderByDesc("StartTime")
+                .GetAsync<CalendarEventSelectDto>();
         }
     }
 }

@@ -235,44 +235,61 @@ else
      class="fixed inset-0 z-50 hidden items-center justify-center p-4"
      aria-modal="true" role="dialog">
 
-    <!-- Backdrop -->
     <div id="deleteBackdrop"
          class="absolute inset-0 bg-black/60 backdrop-blur-sm"
          onclick="closeDeleteModal()"></div>
 
-    <!-- Dialog -->
-    <div class="relative bg-[#161b27] border border-surface-border rounded-2xl shadow-2xl w-full max-w-sm p-6
-                animate-in fade-in zoom-in-95 duration-200">
+    <div class="relative bg-[#161b27] border border-surface-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden
+                transition-all duration-200 scale-95 opacity-0" id="deleteDialog">
 
-        <!-- Icon -->
-        <div class="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4 mx-auto">
-            <i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i>
-        </div>
+        <!-- Red top bar -->
+        <div class="h-[3px] bg-red-500 w-full"></div>
 
-        <!-- Text -->
-        <h3 class="text-white font-semibold text-center text-base mb-1">Delete Task</h3>
-        <p class="text-slate-400 text-sm text-center mb-1">Are you sure you want to delete</p>
-        <p id="deleteTaskTitle"
-           class="text-white text-sm font-medium text-center mb-6 truncate px-2"></p>
+        <div class="p-7">
+            <!-- Header -->
+            <div class="flex items-start gap-4 mb-5">
+                <div class="w-10 h-10 rounded-[10px] bg-red-500/10 border border-red-500/20
+                            flex items-center justify-center shrink-0 mt-0.5">
+                    <i data-lucide="trash-2" class="w-[18px] h-[18px] text-red-400"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-white font-semibold text-[15px] mb-1.5">Delete task?</p>
+                    <p class="text-slate-500 text-[13px] leading-relaxed mb-2">This will permanently delete</p>
+                    <span id="deleteTaskTitle"
+                          class="inline-block text-slate-300 text-[13px] font-medium
+                                 bg-surface border border-surface-border rounded-md
+                                 px-2.5 py-1 max-w-[220px] truncate"></span>
+                </div>
+            </div>
 
-        <!-- Actions -->
-        <div class="flex gap-3">
-            <button type="button" onclick="closeDeleteModal()"
-                    class="flex-1 px-4 py-2.5 bg-surface border border-surface-border hover:border-slate-500
-                           text-slate-300 hover:text-white text-sm font-medium rounded-lg transition-colors">
-                Cancel
-            </button>
+            <!-- Warning -->
+            <div class="flex items-center gap-2 bg-surface border border-surface-border rounded-lg px-3 py-2.5 mb-5">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+                <p class="text-slate-400 text-xs">This action cannot be undone.</p>
+            </div>
 
-            <form id="deleteForm" method="post">
-                @Html.AntiForgeryToken()
-                <button type="submit"
-                        class="flex-1 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30
-                               text-red-400 hover:text-red-300 text-sm font-medium rounded-lg transition-colors
-                               flex items-center gap-2">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    Delete
+            <!-- Buttons -->
+            <div class="flex gap-2.5">
+                <button type="button" onclick="closeDeleteModal()"
+                        class="flex-1 px-4 py-2.5 bg-transparent border border-surface-border
+                               hover:border-slate-500 hover:text-white text-slate-400
+                               text-sm font-medium rounded-lg transition-colors">
+                    Cancel
                 </button>
-            </form>
+
+                <form id="deleteForm" method="post" class="flex-1">
+                    @Html.AntiForgeryToken()
+                    <button type="submit"
+                            class="w-full px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20
+                                   border border-red-500/25 hover:border-red-500/50
+                                   text-red-400 hover:text-red-300
+                                   text-sm font-semibold rounded-lg transition-colors
+                                   flex items-center justify-center gap-2">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        Delete
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -284,18 +301,35 @@ else
         function openDeleteModal(id, title) {
             document.getElementById('deleteTaskTitle').textContent = `"${title}"`;
             document.getElementById('deleteForm').action = `/Tasks/Delete/${id}`;
+
             const modal = document.getElementById('deleteModal');
+            const dialog = document.getElementById('deleteDialog');
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+
+            // Animate in
+            requestAnimationFrame(() => {
+                dialog.classList.remove('scale-95', 'opacity-0');
+                dialog.classList.add('scale-100', 'opacity-100');
+            });
+
+            lucide.createIcons();
         }
 
         function closeDeleteModal() {
             const modal = document.getElementById('deleteModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+            const dialog = document.getElementById('deleteDialog');
+
+            dialog.classList.remove('scale-100', 'opacity-100');
+            dialog.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 150);
         }
 
-        // Close on Escape
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeDeleteModal();
         });

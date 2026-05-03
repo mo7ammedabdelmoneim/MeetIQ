@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MeetIQ.Application.Features.Auth.Commands.RegisterCommand
+﻿namespace MeetIQ.Application.Features.Auth.Commands.RegisterCommand
 {
     public class RegisterDto
     {

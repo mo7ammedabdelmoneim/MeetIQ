@@ -21,7 +21,7 @@ namespace MeetIQ.Interface.Controllers
         public CalendarController(IMediator mediator)
             => _mediator = mediator;
 
-        // ── Helpers ───────────────────────────────────────────────────────────
+        // Helpers 
         private string UserId =>
             User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -35,7 +35,7 @@ namespace MeetIQ.Interface.Controllers
                 .ToList();
         }
 
-        // ── GET /Calendar ─────────────────────────────────────────────────────
+        // GET /Calendar 
         [HttpGet]
         public IActionResult Index()
         {
@@ -43,7 +43,7 @@ namespace MeetIQ.Interface.Controllers
             return View();
         }
 
-        // ── GET /Calendar/Events (AJAX – FullCalendar feed) ───────────────────
+        // (AJAX – FullCalendar feed) 
         [HttpGet]
         public async Task<IActionResult> Events(DateTime start, DateTime end)
         {
@@ -68,7 +68,7 @@ namespace MeetIQ.Interface.Controllers
             return Json(payload);
         }
 
-        // ── GET /Calendar/Details/{id} ────────────────────────────────────────
+        // Details
         [HttpGet]
         public async Task<IActionResult> Details(Guid id)
         {
@@ -84,7 +84,7 @@ namespace MeetIQ.Interface.Controllers
             return View(ev);
         }
 
-        // ── GET /Calendar/Create ──────────────────────────────────────────────
+        // GET Create 
         [HttpGet]
         public async Task<IActionResult> Create(DateTime? start)
         {
@@ -100,7 +100,7 @@ namespace MeetIQ.Interface.Controllers
             return View(vm);
         }
 
-        // ── POST /Calendar/Create ─────────────────────────────────────────────
+        // POST Create 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateCalendarEventViewModel model)
         {
@@ -125,7 +125,7 @@ namespace MeetIQ.Interface.Controllers
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        // ── GET /Calendar/Edit/{id} ───────────────────────────────────────────
+        // GET Edit
         [HttpGet]
         public async Task<IActionResult> Edit(Guid id)
         {
@@ -154,7 +154,7 @@ namespace MeetIQ.Interface.Controllers
             return View(vm);
         }
 
-        // ── POST /Calendar/Edit/{id} ──────────────────────────────────────────
+        // POST Edit
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Guid id, EditCalendarEventViewModel model)
         {
@@ -180,7 +180,7 @@ namespace MeetIQ.Interface.Controllers
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        // ── POST /Calendar/Delete/{id} ────────────────────────────────────────
+        // Delete
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(Guid id)
         {

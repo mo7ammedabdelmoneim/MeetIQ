@@ -1,10 +1,9 @@
 ﻿using MediatR;
-using MeetIQ.Application.Interfaces.Repositories;
+using MeetIQ.Application.Interfaces;
 
 namespace MeetIQ.Application.Features.Calendar.Commands.UpdateCalendarEventCommand
 {
-    // ── Command ───────────────────────────────────────────────────────────────
-    public class UpdateCalendarEventCommand : IRequest<Unit>
+    public class UpdateCalendarEventCommand : ICommand<Unit>
     {
         public Guid Id { get; set; }
         public string OwnerId { get; set; } = string.Empty;

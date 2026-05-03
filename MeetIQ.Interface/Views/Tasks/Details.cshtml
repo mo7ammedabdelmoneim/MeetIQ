@@ -1,24 +1,22 @@
-﻿@using MeetIQ.Application.Features.Tasks.DTOs
-@model TaskDetailsDto
+﻿@model TaskDetailsDto
 @{
     ViewData["Title"] = Model.Title;
 
     var (priColor, priLabel) = Model.Priority switch
     {
-        "High" => ("bg-red-500/10 text-red-400 border-red-500/20", "High"),
-        "Medium" => ("bg-amber-500/10 text-amber-400 border-amber-500/20", "Medium"),
+        "2" => ("bg-red-500/10 text-red-400 border-red-500/20", "High"),
+        "1" => ("bg-amber-500/10 text-amber-400 border-amber-500/20", "Medium"),
         _ => ("bg-slate-500/10 text-slate-400 border-slate-500/20", "Low"),
     };
 
     var (stColor, stLabel) = Model.Status switch
     {
-        "InProgress" => ("bg-brand-500/10 text-brand-400 border-brand-500/20", "In Progress"),
-        "Done" => ("bg-emerald-500/10 text-emerald-400 border-emerald-500/20", "Done"),
-        "Cancelled" => ("bg-slate-500/10 text-slate-500 border-slate-700", "Cancelled"),
+        "1" => ("bg-brand-500/10 text-brand-400 border-brand-500/20", "In Progress"),
+        "2" => ("bg-emerald-500/10 text-emerald-400 border-emerald-500/20", "Done"),
+        "3" => ("bg-slate-500/10 text-slate-500 border-slate-700", "Cancelled"),
         _ => ("bg-slate-500/10 text-slate-400 border-slate-500/20", "To Do"),
     };
 }
-
 <!-- ── BREADCRUMB ── -->
 <div class="flex items-center gap-2 text-xs text-slate-500 mb-6">
     <a href="@Url.Action("Index", "Tasks")" class="hover:text-slate-300 transition-colors">Tasks</a>
@@ -115,20 +113,9 @@
         <div class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-4">
             <p class="text-xs uppercase tracking-widest text-slate-600 font-semibold">Details</p>
 
-           @*  @if (!string.IsNullOrEmpty(Model.AssigneeName))
-            {
-                <div class="flex items-center gap-3">
-                    <i data-lucide="user" class="w-4 h-4 text-slate-600 shrink-0"></i>
-                    <div>
-                        <p class="text-[11px] text-slate-600">Assignee</p>
-                        <p class="text-sm text-white font-medium">@Model.AssigneeName</p>
-                    </div>
-                </div>
-            } *@
-
             @if (Model.DueDate.HasValue)
             {
-                var overdue = Model.DueDate.Value < DateTime.UtcNow && Model.Status != "Done";
+                var overdue = Model.DueDate.Value@*. AddDays(1) *@ < DateTime.UtcNow && Model.Status != "Done";
                 <div class="flex items-center gap-3">
                     <i data-lucide="calendar" class="w-4 h-4 @(overdue ? "text-red-500" : "text-slate-600") shrink-0"></i>
                     <div>
@@ -162,17 +149,72 @@
         <!-- Danger Zone -->
         <div class="bg-surface-card border border-red-500/10 rounded-xl p-5">
             <p class="text-xs uppercase tracking-widest text-slate-600 font-semibold mb-3">Danger Zone</p>
-            <form asp-action="Delete" asp-route-id="@Model.Id" method="post"
-                  onsubmit="return confirm('Are you sure you want to delete this task? This action cannot be undone.')">
-                @Html.AntiForgeryToken()
-                <button type="submit"
-                        class="w-full flex items-center justify-center gap-2 px-4 py-2
-                               border border-red-500/30 hover:border-red-500/60 hover:bg-red-500/10
-                               text-red-400 text-sm font-semibold rounded-lg transition-colors">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    Delete Task
+            <button type="button"
+                    onclick="openDeleteModal('@Model.Id', '@Model.Title.Replace("'", "\\'")')"
+                    class="w-full flex items-center justify-center gap-2 px-4 py-2
+                           border border-red-500/30 hover:border-red-500/60 hover:bg-red-500/10
+                           text-red-400 text-sm font-semibold rounded-lg transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                Delete Task
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── DELETE MODAL ── -->
+<div id="deleteModal"
+     class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+     aria-modal="true" role="dialog">
+
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+         onclick="closeDeleteModal()"></div>
+
+    <div id="deleteDialog"
+         class="relative bg-[#161b27] border border-surface-border rounded-2xl shadow-2xl
+                w-full max-w-sm overflow-hidden transition-all duration-200 scale-95 opacity-0">
+
+        <div class="h-[3px] bg-red-500 w-full"></div>
+
+        <div class="p-7">
+            <div class="flex items-start gap-4 mb-5">
+                <div class="w-10 h-10 rounded-[10px] bg-red-500/10 border border-red-500/20
+                            flex items-center justify-center shrink-0 mt-0.5">
+                    <i data-lucide="trash-2" class="w-[18px] h-[18px] text-red-400"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-white font-semibold text-[15px] mb-1.5">Delete task?</p>
+                    <p class="text-slate-500 text-[13px] leading-relaxed mb-2">This will permanently delete</p>
+                    <span id="deleteTaskTitle"
+                          class="inline-block text-slate-300 text-[13px] font-medium
+                                 bg-surface border border-surface-border rounded-md
+                                 px-2.5 py-1 max-w-[220px] truncate"></span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 bg-surface border border-surface-border rounded-lg px-3 py-2.5 mb-5">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+                <p class="text-slate-400 text-xs">This action cannot be undone.</p>
+            </div>
+
+            <div class="flex gap-2.5">
+                <button type="button" onclick="closeDeleteModal()"
+                        class="flex-1 px-4 py-2.5 bg-transparent border border-surface-border
+                               hover:border-slate-500 hover:text-white text-slate-400
+                               text-sm font-medium rounded-lg transition-colors">
+                    Cancel
                 </button>
-            </form>
+                <form id="deleteForm" method="post" class="flex-1">
+                    @Html.AntiForgeryToken()
+                    <button type="submit"
+                            class="w-full px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20
+                                   border border-red-500/25 hover:border-red-500/50
+                                   text-red-400 hover:text-red-300 text-sm font-semibold
+                                   rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        Delete
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -259,7 +301,6 @@
             color: #93c5fd;
         }
 
-        /* Toast */
         #status-toast {
             transition: opacity .3s, transform .3s;
         }
@@ -271,7 +312,6 @@
             }
     </style>
 
-    <!-- Toast element (lives outside the grid so it floats) -->
     <div id="status-toast"
          class="hide fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3
                 bg-surface-card border border-surface-border rounded-xl shadow-xl text-sm font-medium text-white">
@@ -286,7 +326,6 @@
         const TOKEN = document.querySelector('input[name="__RequestVerificationToken"]')?.value
             ?? document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '';
 
-        // Maps status key → badge classes + label
         const STATUS_META = {
             'ToDo': { cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20', label: 'To Do' },
             'InProgress': { cls: 'bg-brand-500/10 text-brand-400 border-brand-500/20', label: 'In Progress' },
@@ -299,7 +338,6 @@
             const statusKey = btn.dataset.statusKey;
             const statusLabel = btn.dataset.statusLabel;
 
-            // Show spinner
             const spinner = document.getElementById('status-spinner');
             spinner.classList.remove('hidden');
             btn.disabled = true;
@@ -317,13 +355,11 @@
 
                 if (!res.ok) throw new Error('Request failed: ' + res.status);
 
-                // ── Update badge ──
                 const badge = document.getElementById('status-badge');
                 const meta = STATUS_META[statusKey] || { cls: '', label: statusLabel };
                 badge.className = 'inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ' + meta.cls;
                 badge.textContent = meta.label;
 
-                // ── Update buttons active state ──
                 document.querySelectorAll('.status-btn').forEach(b => {
                     const isCurrent = b.dataset.statusKey === statusKey;
                     b.querySelector('.check-mark').textContent = isCurrent ? '✓ ' : '';
@@ -351,14 +387,45 @@
             const toast = document.getElementById('status-toast');
             const iconEl = document.getElementById('toast-icon');
             const msgEl = document.getElementById('toast-msg');
-
             iconEl.textContent = icon;
             iconEl.className = 'text-base ' + iconCls;
             msgEl.textContent = msg;
-
             toast.classList.remove('hide');
             clearTimeout(toastTimer);
             toastTimer = setTimeout(() => toast.classList.add('hide'), 2800);
         }
+
+        // ── Delete Modal ──
+        function openDeleteModal(id, title) {
+            document.getElementById('deleteTaskTitle').textContent = `"${title}"`;
+            document.getElementById('deleteForm').action = `/Tasks/Delete/${id}`;
+
+            const modal = document.getElementById('deleteModal');
+            const dialog = document.getElementById('deleteDialog');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            requestAnimationFrame(() => {
+                dialog.classList.remove('scale-95', 'opacity-0');
+                dialog.classList.add('scale-100', 'opacity-100');
+            });
+
+            lucide.createIcons();
+        }
+
+        function closeDeleteModal() {
+            const dialog = document.getElementById('deleteDialog');
+            const modal = document.getElementById('deleteModal');
+            dialog.classList.remove('scale-100', 'opacity-100');
+            dialog.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 150);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeDeleteModal();
+        });
     </script>
 }

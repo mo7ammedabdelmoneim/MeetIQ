@@ -1,13 +1,10 @@
-﻿// ── Command ───────────────────────────────────────────────────────────────────
-using Azure.Core;
-using MediatR;
+﻿using MediatR;
 using MeetIQ.Application.Common.Exceptions;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Domain.Entities;
 
 namespace MeetIQ.Application.Features.Calendar.Commands.CreateCalendarEventCommand
 {
-    // ── Handler ───────────────────────────────────────────────────────────────
     public class CreateCalendarEventCommandHandler
         : IRequestHandler<CreateCalendarEventCommand, Guid>
     {

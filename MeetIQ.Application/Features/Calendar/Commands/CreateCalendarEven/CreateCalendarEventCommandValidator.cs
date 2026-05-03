@@ -1,9 +1,7 @@
-﻿// ── Command ───────────────────────────────────────────────────────────────────
-using FluentValidation;
+﻿using FluentValidation;
 
 namespace MeetIQ.Application.Features.Calendar.Commands.CreateCalendarEventCommand
 {
-    // ── Validator ─────────────────────────────────────────────────────────────
     public class CreateCalendarEventCommandValidator
         : AbstractValidator<CreateCalendarEventCommand>
     {

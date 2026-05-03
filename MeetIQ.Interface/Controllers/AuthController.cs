@@ -3,7 +3,6 @@ using MeetIQ.Application.Features.Auth.Commands.ExternalLoginCommand;
 using MeetIQ.Application.Features.Auth.Commands.LoginCommand;
 using MeetIQ.Application.Features.Auth.Commands.RegisterCommand;
 using MeetIQ.Domain.Entities;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

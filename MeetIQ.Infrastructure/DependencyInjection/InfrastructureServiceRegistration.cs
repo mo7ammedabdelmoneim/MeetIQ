@@ -2,6 +2,7 @@
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Domain.Entities;
+using MeetIQ.Infrastructure.Persistence.Repositories;
 using MeetIQ.Infrastructure.Presistence;
 using MeetIQ.Infrastructure.Presistence.Repositories;
 using MeetIQ.Infrastructure.Services;
@@ -59,7 +60,7 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<IMeetingRepository, MeetingRepository>();
             services.AddScoped<IMeetingParticipantRepository, MeetingParticipantRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
-            //services.AddScoped<INoteRepository, NoteRepository>();
+            services.AddScoped<INoteRepository, NoteRepository>();
             services.AddScoped<ITagRepository, TagRepository>();
             services.AddScoped<INoteTagRepository, NoteTagRepository>();
             services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
@@ -68,7 +69,6 @@ namespace MeetIQ.Infrastructure.DependencyInjection
 
             // Services
             services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<INoteService, NoteService>();
             services.AddSingleton<JitsiTokenService>();
 
             return services;

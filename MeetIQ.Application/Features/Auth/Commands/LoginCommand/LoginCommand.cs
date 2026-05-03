@@ -1,14 +1,9 @@
-﻿using MediatR;
-using MeetIQ.Application.Features.Auth.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MeetIQ.Application.Features.Auth.DTOs;
+using MeetIQ.Application.Interfaces;
 
 namespace MeetIQ.Application.Features.Auth.Commands.LoginCommand
 {
-    public class LoginCommand : IRequest<AuthResponse>
+    public class LoginCommand : ICommand<AuthResponse>
     {
         public LoginDto LoginDto { get; set; }
 
