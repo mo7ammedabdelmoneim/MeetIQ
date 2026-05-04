@@ -225,9 +225,9 @@
                     @(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
                 </div>
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm text-white font-medium truncate">@(User.Identity?.Name ?? "User")</p>
+                        <p class="text-sm text-white font-medium truncate">@(User.FindFirst("FullName")?.Value ?? "ME")</p>
                     <p class="text-[11px] text-slate-500 truncate">
-                        @(User.IsInRole("Administrator") ? "Administrator" : "Member")
+                        @(User.IsInRole(Roles.Admin) ? "Administrator" : "Member")
                     </p>
                 </div>
                 <i data-lucide="chevrons-up-down" class="w-4 h-4 text-slate-600 group-hover:text-slate-400 shrink-0"></i>
@@ -264,14 +264,7 @@
                 </a>
 
                 <!-- Notifications -->
-                <button class="relative p-2 rounded-lg hover:bg-surface-hover text-slate-400 hover:text-white transition-colors">
-                    <i data-lucide="bell" class="w-4.5 h-4.5 w-[18px] h-[18px]"></i>
-                    <!-- Unread dot -->
-                    <span class="absolute top-1.5 right-1.5 flex h-2 w-2">
-                        <span class="ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
-                    </span>
-                </button>
+                @await Component.InvokeAsync("NotificationBell")
 
                 <!-- Feedback -->
                 <a href="/Feedback/Create"

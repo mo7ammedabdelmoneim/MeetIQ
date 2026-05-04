@@ -21,6 +21,7 @@ namespace MeetIQ.Infrastructure.Presistence
         public DbSet<NoteTag> NoteTags { get; set; }
         public DbSet<Tag> Tags { get; set; }
         public DbSet<TaskItem>  TaskItems { get; set; }
+        public DbSet<Notification>  Notifications { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)

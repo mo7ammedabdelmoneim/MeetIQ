@@ -1,0 +1,22 @@
+﻿@model int
+@{
+    int count = Model;
+}
+
+<a href="/Notifications"
+   class="relative p-2 rounded-lg hover:bg-surface-hover text-slate-400
+          hover:text-white transition-colors"
+   title="Notifications">
+
+    <i data-lucide="bell" class="w-[18px] h-[18px]"></i>
+
+    @if (count > 0)
+    {
+        <span class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1
+                     flex items-center justify-center
+                     rounded-full bg-brand-500 text-white
+                     text-[10px] font-bold leading-none shadow-glow">
+            @(count > 99 ? "99+" : count.ToString())
+        </span>
+    }
+</a>

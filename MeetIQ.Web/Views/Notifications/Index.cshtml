@@ -1,0 +1,233 @@
+﻿@model PagedResult<NotificationDto>
+@{
+    ViewData["Title"] = "Notifications";
+    int unreadCount = Model.Items.Count(x => !x.IsRead);
+}
+
+<div class="space-y-5">
+
+    <!-- ── Header ── -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-lg font-semibold text-white">Notifications</h2>
+            <p class="text-xs text-slate-500 mt-0.5">
+                @if (unreadCount > 0)
+                {
+                    <span class="text-brand-400 font-medium">@unreadCount unread</span>
+                    <span> · </span>
+                }
+                @Model.TotalCount total
+            </p>
+        </div>
+
+        @if (unreadCount > 0)
+        {
+            <form asp-action="MarkAllAsRead" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit"
+                        class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium
+                               text-slate-400 hover:text-white border border-surface-border
+                               hover:border-brand-600 rounded-lg transition-colors">
+                    <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                    Mark all as read
+                </button>
+            </form>
+        }
+    </div>
+
+    <!-- ── Empty State ── -->
+    @if (!Model.Items.Any())
+    {
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-surface-card border border-surface-border
+                        flex items-center justify-center mb-4">
+                <i data-lucide="bell-off" class="w-6 h-6 text-slate-600"></i>
+            </div>
+            <p class="text-sm font-medium text-slate-400">You're all caught up</p>
+            <p class="text-xs text-slate-600 mt-1">No notifications yet.</p>
+        </div>
+    }
+    else
+    {
+        <!-- ── Notification List ── -->
+        <div class="divide-y divide-surface-border rounded-xl border border-surface-border
+                    bg-surface-card overflow-hidden">
+            @foreach (var item in Model.Items)
+            {
+                <div class="group flex items-start gap-4 px-5 py-4
+                            @(!item.IsRead ? "bg-brand-950/30" : "")
+                            hover:bg-surface-hover transition-colors relative">
+
+                    <!-- Unread dot -->
+                    @if (!item.IsRead)
+                    {
+                        <span class="absolute left-2 top-1/2 -translate-y-1/2
+                                     w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0"></span>
+                    }
+
+                    <!-- Icon -->
+                    <div class="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center
+                                @NotificationIconBg(item.Type)">
+                        <i data-lucide="@NotificationIcon(item.Type)"
+                           class="w-4 h-4 @NotificationIconColor(item.Type)"></i>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium @(!item.IsRead ? "text-white" : "text-slate-300") truncate">
+                                    @item.Title
+                                </p>
+                                <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                                    @item.Message
+                                </p>
+                            </div>
+                            <span class="text-[11px] text-slate-600 whitespace-nowrap shrink-0 mt-0.5">
+                                @TimeAgo(item.CreatedAt)
+                            </span>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex items-center gap-3 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            @if (!string.IsNullOrEmpty(item.ActionUrl))
+                            {
+                                <form asp-action="MarkAsRead" method="post" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <input type="hidden" name="returnUrl" value="@item.ActionUrl" />
+                                    <button type="submit"
+                                            class="text-[11px] font-medium text-brand-400 hover:text-brand-300 transition-colors">
+                                        View →
+                                    </button>
+                                </form>
+                            }
+
+                            @if (!item.IsRead)
+                            {
+                                <form asp-action="MarkAsRead" method="post" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit"
+                                            class="text-[11px] text-slate-500 hover:text-slate-300 transition-colors">
+                                        Mark as read
+                                    </button>
+                                </form>
+                            }
+
+                            <form asp-action="Delete" method="post" class="inline ml-auto">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit"
+                                        class="text-[11px] text-slate-600 hover:text-red-400 transition-colors">
+                                    Dismiss
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- ── Pagination ── -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="flex items-center justify-center gap-2 pt-2">
+                @for (int p = 1; p <= Model.TotalPages; p++)
+                {
+                    <a href="?page=@p"
+                       class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors
+                              @(p == Model.Page
+                                  ? "bg-brand-600 text-white"
+                                  : "text-slate-500 hover:text-white hover:bg-surface-hover border border-surface-border")">
+                        @p
+                    </a>
+                }
+            </div>
+        }
+    }
+</div>
+
+@functions {
+    string TimeAgo(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return dt.ToString("MMM d");
+    }
+
+    string NotificationIcon(NotificationType type) => type switch
+    {
+        NotificationType.MeetingScheduled => "calendar-check",
+        NotificationType.MeetingStartingSoon => "alarm-clock",
+        NotificationType.MeetingCancelled => "calendar-x",
+        NotificationType.MeetingUpdated => "calendar-clock",
+        NotificationType.MeetingEnded => "video-off",
+        NotificationType.ParticipantJoined => "user-plus",
+        NotificationType.YouWereAddedToMeeting => "users",
+        NotificationType.TranscriptReady => "mic-2",
+        NotificationType.SummaryReady => "sparkles",
+        NotificationType.TasksAutoGenerated => "wand-2",
+        NotificationType.TaskAssigned => "check-square",
+        NotificationType.TaskDueSoon => "clock",
+        NotificationType.TaskOverdue => "alert-triangle",
+        NotificationType.TaskStatusChanged => "refresh-cw",
+        NotificationType.NoteShared => "notebook-pen",
+        NotificationType.FeedbackReceived => "flag",
+        NotificationType.SystemAlert => "shield-alert",
+        _ => "bell"
+    };
+
+    string NotificationIconBg(NotificationType type) => type switch
+    {
+        NotificationType.MeetingScheduled
+        or NotificationType.MeetingStartingSoon
+        or NotificationType.MeetingUpdated
+        or NotificationType.YouWereAddedToMeeting
+        or NotificationType.ParticipantJoined => "bg-brand-950 border border-brand-900/60",
+
+        NotificationType.TranscriptReady
+        or NotificationType.SummaryReady
+        or NotificationType.TasksAutoGenerated => "bg-violet-950 border border-violet-900/60",
+
+        NotificationType.TaskAssigned
+        or NotificationType.TaskStatusChanged => "bg-emerald-950 border border-emerald-900/60",
+
+        NotificationType.TaskDueSoon
+        or NotificationType.TaskOverdue => "bg-amber-950 border border-amber-900/60",
+
+        NotificationType.MeetingCancelled
+        or NotificationType.MeetingEnded
+        or NotificationType.SystemAlert => "bg-red-950 border border-red-900/60",
+
+        _ => "bg-surface border border-surface-border"
+    };
+
+    string NotificationIconColor(NotificationType type) => type switch
+    {
+        NotificationType.MeetingScheduled
+        or NotificationType.MeetingStartingSoon
+        or NotificationType.MeetingUpdated
+        or NotificationType.YouWereAddedToMeeting
+        or NotificationType.ParticipantJoined => "text-brand-400",
+
+        NotificationType.TranscriptReady
+        or NotificationType.SummaryReady
+        or NotificationType.TasksAutoGenerated => "text-violet-400",
+
+        NotificationType.TaskAssigned
+        or NotificationType.TaskStatusChanged => "text-emerald-400",
+
+        NotificationType.TaskDueSoon
+        or NotificationType.TaskOverdue => "text-amber-400",
+
+        NotificationType.MeetingCancelled
+        or NotificationType.MeetingEnded
+        or NotificationType.SystemAlert => "text-red-400",
+
+        _ => "text-slate-400"
+    };
+}
