@@ -84,6 +84,10 @@ namespace MeetIQ.Infrastructure.Services
             if (!isValid)
                 throw new BadRequestException("Invalid email or password");
 
+            if(!user.IsActive)
+                throw new BadRequestException("Inactive email");
+
+
             var roles = await _userManager.GetRolesAsync(user);
 
             var claims = new List<Claim>
@@ -217,6 +221,28 @@ namespace MeetIQ.Infrastructure.Services
                 FullName = user.FullName,
                 Roles = (await _userManager.GetRolesAsync(user)).ToList()
             };
+        }
+
+
+
+        public async Task<ApplicationUser?> GetByIdAsync(string userId)
+        {
+            return await _userManager.FindByIdAsync(userId);
+        }
+
+        public async Task<IList<string>> GetUserRolesAsync(ApplicationUser user)
+        {
+            return await _userManager.GetRolesAsync(user);
+        }
+
+        public async Task RemoveFromRolesAsync(ApplicationUser user, IEnumerable<string> roles)
+        {
+            await _userManager.RemoveFromRolesAsync(user, roles);
+        }
+
+        public async Task AddToRoleAsync(ApplicationUser user, string role)
+        {
+            await _userManager.AddToRoleAsync(user, role);
         }
     }
 }

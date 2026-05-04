@@ -1,0 +1,159 @@
+﻿@model UserDetailsDto
+
+@{
+    ViewData["Title"] = "User Details";
+}
+
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <!-- Back -->
+    <a href="@Url.Action("Index")"
+       class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Back to Users
+    </a>
+
+    <!-- Success -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+            <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+            @TempData["Success"]
+        </div>
+    }
+
+    <!-- Profile Card -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+        <div class="flex items-start justify-between gap-6">
+            <!-- Avatar + Info -->
+            <div class="flex items-center gap-4">
+                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                {
+                    <img src="@Model.AvatarUrl" alt="@Model.FullName"
+                         class="w-14 h-14 rounded-full object-cover shrink-0" />
+                }
+                else
+                {
+                    <div class="w-14 h-14 rounded-full bg-brand-900 border border-brand-700
+                                flex items-center justify-center text-brand-300 text-xl font-semibold shrink-0">
+                        @Model.FullName.Substring(0, 1).ToUpper()
+                    </div>
+                }
+                <div>
+                    <h3 class="text-lg font-semibold text-white">@Model.FullName</h3>
+                    <p class="text-sm text-slate-500">@Model.Email</p>
+                    <div class="flex items-center gap-2 mt-2">
+                        <!-- Role Badge -->
+                        @if (Model.Role == Roles.Admin)
+                        {
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full border
+                                         text-brand-400 bg-brand-400/10 border-brand-400/20">Admin</span>
+                        }
+                        else
+                        {
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full border
+                                         text-slate-400 bg-slate-400/10 border-slate-400/20">Member</span>
+                        }
+
+                        <!-- Status Badge -->
+                        @if (Model.IsActive)
+                        {
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full border
+                                         text-emerald-400 bg-emerald-400/10 border-emerald-400/20">Active</span>
+                        }
+                        else
+                        {
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full border
+                                         text-red-400 bg-red-400/10 border-red-400/20">Inactive</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Joined -->
+            <div class="text-right shrink-0">
+                <p class="text-xs text-slate-600 uppercase tracking-wider mb-1">Joined</p>
+                <p class="text-sm text-slate-300">@Model.CreatedAt.ToString("MMM dd, yyyy")</p>
+                @if (Model.LastMeetingAt.HasValue)
+                {
+                    <p class="text-xs text-slate-600 mt-1">
+                        Last meeting: @Model.LastMeetingAt.Value.ToString("MMM dd")
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        @{
+            var stats = new[]
+            {
+        new { Label = "Meetings", Value = Model.MeetingsCount.ToString(), Icon = "video" },
+        new { Label = "Tasks", Value = Model.TasksCount.ToString(), Icon = "check-square" },
+        new { Label = "Notes", Value = Model.NotesCount.ToString(), Icon = "notebook-pen" },
+        new { Label = "Feedback", Value = Model.FeedbackCount.ToString(), Icon = "flag" },
+        };
+        }
+        @foreach (var stat in stats)
+        {
+            <div class="bg-surface-card border border-surface-border rounded-xl p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <i data-lucide="@stat.Icon" class="w-4 h-4 text-slate-500"></i>
+                    <span class="text-xs text-slate-500 font-medium">@stat.Label</span>
+                </div>
+                <p class="text-2xl font-semibold text-white">@stat.Value</p>
+            </div>
+        }
+    </div>
+
+    <!-- Admin Actions -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl divide-y divide-surface-border">
+
+        <!-- Toggle Status -->
+        <div class="px-6 py-5 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm font-semibold text-white">Account Status</p>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    @(Model.IsActive ? "User can log in and access the platform." : "User is blocked from accessing the platform.")
+                </p>
+            </div>
+            <form asp-controller="AdminUsers" asp-action="ToggleStatus" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="userId" value="@Model.Id" />
+                <button type="submit"
+                        class="@(Model.IsActive
+                            ? "flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors"
+                            : "flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-sm font-medium transition-colors")">
+                    <i data-lucide="@(Model.IsActive ? "user-x" : "user-check")" class="w-4 h-4"></i>
+                    @(Model.IsActive ? "Deactivate User" : "Activate User")
+                </button>
+            </form>
+        </div>
+
+        <!-- Change Role -->
+        <div class="px-6 py-5 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm font-semibold text-white">User Role</p>
+                <p class="text-xs text-slate-500 mt-0.5">Change what this user can access.</p>
+            </div>
+            <form asp-controller="AdminUsers" asp-action="ChangeRole" method="post"
+                  class="flex items-center gap-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="UserId" value="@Model.Id" />
+                <select name="NewRole"
+                        class="bg-surface border border-surface-border rounded-xl px-3 py-2 text-sm text-slate-300
+                               focus:outline-none focus:border-brand-600 transition-colors">
+                    <option value="@Roles.User" selected="@(Model.Role != Roles.User)">Member</option>
+                    <option value="@Roles.Admin" selected="@(Model.Role == Roles.Admin)">Administrator</option>
+                </select>
+                <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500
+                               text-white text-sm font-semibold rounded-xl transition-colors shadow-glow shrink-0">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Save
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

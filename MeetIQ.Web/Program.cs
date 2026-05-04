@@ -18,10 +18,10 @@ namespace MeetIQ.Web
             builder.Services.AddInfrastructureServices(builder.Configuration);
             //builder.Services.AddHttpContextAccessor();
             builder.Services.AddControllersWithViews();
-            builder.Services.AddControllersWithViews(options =>
-            {
-                options.Filters.Add<GlobalExceptionFilter>();
-            });
+            //builder.Services.AddControllersWithViews(options =>
+            //{
+            //    options.Filters.Add<GlobalExceptionFilter>();
+            //});
 
             //  Cookie config 
             builder.Services.ConfigureApplicationCookie(options =>
