@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using MeetIQ.Application.Common.Exceptions;
 using MeetIQ.Application.Common.Results;
 using MeetIQ.Application.Interfaces.Repositories;
 

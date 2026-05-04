@@ -14,39 +14,35 @@ namespace MeetIQ.Interface.Filters
             _tempDataFactory = tempDataFactory;
         }
 
-        public override void OnException(ExceptionContext context)
+       public override void OnException(ExceptionContext context)
         {
             var exception = context.Exception;
             var message = "Something went wrong. Please try again.";
-            var action = "Index";
-            var controller = "Home";
+            var errorCode = "500";
 
             switch (exception)
             {
                 case BadRequestException:
+                    errorCode = "400";
                     message = exception.Message;
-                    // Stay on same page so the user can correct their input
-                    action = context.RouteData.Values["action"]?.ToString() ?? "Index";
-                    controller = context.RouteData.Values["controller"]?.ToString() ?? "Home";
                     break;
-                    
+
                 case NotFoundException:
+                    errorCode = "404";
                     message = exception.Message;
-                    action = "NotFound";
-                    controller = "Home";
                     break;
 
                 case UnauthorizedException:
+                    errorCode = "401";
                     message = exception.Message;
-                    action = "Login";
-                    controller = "Auth";
                     break;
             }
 
             var tempData = _tempDataFactory.GetTempData(context.HttpContext);
             tempData["ErrorMessage"] = message;
+            tempData["ErrorCode"] = errorCode;
 
-            context.Result = new RedirectToActionResult(action, controller, null);
+            context.Result = new RedirectToActionResult("Error", "Home", null);
             context.ExceptionHandled = true;
         }
     }

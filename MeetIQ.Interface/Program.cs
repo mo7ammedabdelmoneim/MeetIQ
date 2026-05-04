@@ -1,5 +1,6 @@
 using MeetIQ.Application.DependencyInjection;
 using MeetIQ.Infrastructure.DependencyInjection;
+using MeetIQ.Interface.Filters;
 
 namespace MeetIQ.Interface
 {
@@ -14,10 +15,10 @@ namespace MeetIQ.Interface
             builder.Services.AddInfrastructureServices(builder.Configuration);
             //builder.Services.AddHttpContextAccessor();
             builder.Services.AddControllersWithViews();
-            //builder.Services.AddControllersWithViews(options =>
-            //{
-            //    options.Filters.Add<GlobalExceptionFilter>();
-            //});
+            builder.Services.AddControllersWithViews(options =>
+            {
+                options.Filters.Add<GlobalExceptionFilter>();
+            });
 
             //  Cookie config 
             builder.Services.ConfigureApplicationCookie(options =>
@@ -43,19 +44,22 @@ namespace MeetIQ.Interface
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
-            {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }
+            //Configure the HTTP request pipeline.
+            //if (!app.Environment.IsDevelopment())
+            //{
+            //    app.UseExceptionHandler("/Home/Error");
+            //    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+            //    app.UseHsts();
+            //}
 
+            app.Use(async (context, next) =>
+            {
+                try{ await next();}
+                catch{context.Response.Redirect("/Home/Error");}
+            });
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-
             app.UseRouting();
-            app.UseExceptionHandler("/Error");
             app.UseAuthentication();
             app.UseAuthorization();
 

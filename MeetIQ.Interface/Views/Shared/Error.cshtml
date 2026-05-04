@@ -2,7 +2,34 @@
     ViewData["Title"] = "Something went wrong";
     Layout = null;
     var requestId = ViewData["RequestId"]?.ToString();
-    var errorMsg = TempData["ErrorMessage"]?.ToString();
+    var errorCode = ViewData["ErrorCode"]?.ToString() ?? "500";
+    var errorMsg = ViewData["ErrorMessage"]?.ToString()
+                   ?? "An unexpected error occurred on our end. Please try again or contact support if the problem persists.";
+
+    var is401 = errorCode == "401";
+    var is404 = errorCode == "404";
+    var is400 = errorCode == "400";
+
+    var orbColor = is401 ? "rgba(234,179,8,0.07)" :
+                   is404 ? "rgba(148,163,184,0.07)" :
+                           "rgba(239,68,68,0.07)";
+
+    var borderColor = is401 ? "border-yellow-500/20" :
+                      is404 ? "border-slate-500/20" :
+                              "border-red-500/20";
+
+    var bgColor = is401 ? "bg-yellow-500/5" :
+                  is404 ? "bg-slate-500/5" :
+                          "bg-red-500/5";
+
+    var textColor = is401 ? "text-yellow-400" :
+                    is404 ? "text-slate-400" :
+                            "text-red-400";
+
+    var title = is401 ? "Unauthorized" :
+                is404 ? "Page Not Found" :
+                is400 ? "Bad Request" :
+                        "Something went wrong";
 }
 
 <!DOCTYPE html>
@@ -48,7 +75,6 @@
             position: absolute;
             border-radius: 50%;
             pointer-events: none;
-            background: radial-gradient(circle, rgba(239,68,68,0.07) 0%, transparent 70%);
         }
 
         body::before {
@@ -64,8 +90,10 @@
 <body class="h-full bg-surface font-sans text-slate-300 antialiased">
     <div class="relative min-h-screen dot-grid flex flex-col items-center justify-center px-6">
 
-        <!-- Red-tinted orb for error feel -->
-        <div class="orb w-[500px] h-[500px] top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+        <!-- Dynamic orb color -->
+        <div class="orb w-[500px] h-[500px] top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"
+             style="background: radial-gradient(circle, @orbColor 0%, transparent 70%);">
+        </div>
 
         <!-- Logo -->
         <a href="/" class="flex items-center gap-2 mb-12">
@@ -85,37 +113,50 @@
         <!-- Card -->
         <div class="relative z-10 w-full max-w-md text-center">
 
-            <!-- 500 code -->
+            <!-- Error code -->
             <p class="font-display text-[96px] font-bold leading-none text-surface-border select-none mb-2">
-                500
+                @errorCode
             </p>
 
             <!-- Icon -->
-            <div class="w-14 h-14 rounded-2xl bg-red-500/5 border border-red-500/20
-                    flex items-center justify-center mx-auto mb-6">
-                <svg class="w-6 h-6 text-red-400" xmlns="http://www.w3.org/2000/svg"
+            <div class="w-14 h-14 rounded-2xl @bgColor border @borderColor
+                        flex items-center justify-center mx-auto mb-6">
+                <svg class="w-6 h-6 @textColor" xmlns="http://www.w3.org/2000/svg"
                      viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                    @if (is401)
+                    {
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    }
+                    else if (is404)
+                    {
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        <line x1="11" y1="8" x2="11" y2="14" />
+                        <line x1="8" y1="11" x2="14" y2="11" />
+                    }
+                    else
+                    {
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    }
                 </svg>
             </div>
 
-            <h1 class="font-display text-2xl font-bold text-white mb-3">Something went wrong</h1>
+            <h1 class="font-display text-2xl font-bold text-white mb-3">@title</h1>
 
-            <!-- Error message from TempData (safe user-facing message) -->
             <p class="text-slate-500 text-sm leading-relaxed mb-2 max-w-sm mx-auto">
-                @(string.IsNullOrEmpty(errorMsg)
-                    ? "An unexpected error occurred on our end. Please try again or contact support if the problem persists."
-                    : errorMsg)
+                @errorMsg
             </p>
 
             <!-- Actions -->
             <div class="flex items-center justify-center gap-3 flex-wrap mt-8">
                 <a href="/"
                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500
-                      text-white text-sm font-semibold rounded-xl transition-colors">
+                          text-white text-sm font-semibold rounded-xl transition-colors">
                     <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                          fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" stroke-linejoin="round">
@@ -124,21 +165,20 @@
                     </svg>
                     Go to Dashboard
                 </a>
-                <button onclick="location.reload()"
+                <button onclick="history.back()"
                         class="inline-flex items-center gap-2 px-5 py-2.5 border border-surface-border
-                           hover:border-brand-700 text-slate-300 hover:text-white text-sm
-                           rounded-xl transition-colors">
+                               hover:border-brand-700 text-slate-300 hover:text-white text-sm
+                               rounded-xl transition-colors">
                     <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                          fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="23 4 23 10 17 10" />
-                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        <polyline points="15 18 9 12 15 6" />
                     </svg>
-                    Try again
+                    Go back
                 </button>
             </div>
 
-            <!-- Request ID for support -->
+            <!-- Request ID -->
             @if (!string.IsNullOrEmpty(requestId))
             {
                 <div class="mt-8 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-left">

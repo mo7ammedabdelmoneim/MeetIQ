@@ -53,6 +53,8 @@ namespace MeetIQ.Interface.Controllers
         {
             var requestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
             ViewData["RequestId"] = requestId;
+            ViewData["ErrorCode"] = TempData["ErrorCode"]?.ToString() ?? "500";
+            ViewData["ErrorMessage"] = TempData["ErrorMessage"]?.ToString();
             return View("Error");
         }
         public IActionResult Privacy()
