@@ -1,0 +1,313 @@
+﻿@model SystemHealthDto
+
+@{
+    ViewData["Title"] = "System Health";
+
+    // Chart data serialized for JS
+    var userGrowthLabels = System.Text.Json.JsonSerializer.Serialize(Model.UserGrowth.Select(x => x.Month));
+    var userGrowthValues = System.Text.Json.JsonSerializer.Serialize(Model.UserGrowth.Select(x => x.Count));
+    var meetingLabels = System.Text.Json.JsonSerializer.Serialize(Model.MeetingActivity.Select(x => x.Month));
+    var meetingValues = System.Text.Json.JsonSerializer.Serialize(Model.MeetingActivity.Select(x => x.Count));
+}
+
+<div class="space-y-8">
+
+    <!-- ── Page Header ──────────────────────────────────────── -->
+    <div>
+        <h2 class="text-xl font-semibold text-white">System Health</h2>
+        <p class="text-slate-500 text-sm mt-0.5">
+            Live snapshot of the platform — last refreshed at @DateTime.UtcNow.ToString("HH:mm UTC")
+        </p>
+    </div>
+
+    <!-- ── Primary Stats ────────────────────────────────────── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        @{
+            var primaryStats = new[]
+            {
+        new { Label = "Total Users",    Value = Model.TotalUsers.ToString(),
+        Sub = $"+{Model.NewUsersThisMonth} this month",
+        Icon = "users", Color = "text-brand-400", Bg = "bg-brand-400/10" },
+
+        new { Label = "Meetings",       Value = Model.TotalMeetings.ToString(),
+        Sub = $"{Model.MeetingsThisMonth} this month",
+        Icon = "video", Color = "text-violet-400", Bg = "bg-violet-400/10" },
+
+        new { Label = "Tasks",          Value = Model.TotalTasks.ToString(),
+        Sub = $"{Model.PendingTasks} pending",
+        Icon = "check-square", Color = "text-amber-400", Bg = "bg-amber-400/10" },
+
+        new { Label = "Transcripts",    Value = Model.TotalTranscripts.ToString(),
+        Sub = $"{Model.UnprocessedTranscripts} unprocessed",
+        Icon = "mic-2", Color = "text-emerald-400", Bg = "bg-emerald-400/10" },
+        };
+        }
+
+        @foreach (var stat in primaryStats)
+        {
+            <div class="bg-surface-card border border-surface-border rounded-2xl p-5 hover:border-surface-hover transition-colors">
+                <div class="flex items-start justify-between mb-4">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">@stat.Label</span>
+                    <div class="w-8 h-8 rounded-lg @stat.Bg flex items-center justify-center shrink-0">
+                        <i data-lucide="@stat.Icon" class="w-4 h-4 @stat.Color"></i>
+                    </div>
+                </div>
+                <p class="text-3xl font-semibold text-white">@stat.Value</p>
+                <p class="text-xs text-slate-600 mt-1">@stat.Sub</p>
+            </div>
+        }
+    </div>
+
+    <!-- ── Charts Row ────────────────────────────────────────── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- User Growth Chart -->
+        <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-sm font-semibold text-white">User Growth</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">New registrations — last 6 months</p>
+                </div>
+                <i data-lucide="trending-up" class="w-4 h-4 text-brand-400"></i>
+            </div>
+            <canvas id="userGrowthChart" height="180"></canvas>
+        </div>
+
+        <!-- Meeting Activity Chart -->
+        <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-sm font-semibold text-white">Meeting Activity</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Meetings scheduled — last 6 months</p>
+                </div>
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-violet-400"></i>
+            </div>
+            <canvas id="meetingChart" height="180"></canvas>
+        </div>
+    </div>
+
+    <!-- ── Secondary Stats Grid ──────────────────────────────── -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Feedback Breakdown -->
+        <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+            <div class="flex items-center gap-2 mb-5">
+                <i data-lucide="flag" class="w-4 h-4 text-slate-500"></i>
+                <h3 class="text-sm font-semibold text-white">Feedback</h3>
+            </div>
+            <div class="space-y-3">
+                @{
+                    var feedbackRows = new[]
+                    {
+                new { Label = "Total Reports",  Value = Model.TotalFeedback,   Color = "text-slate-300" },
+                new { Label = "Open",           Value = Model.OpenFeedback,     Color = "text-amber-400" },
+                new { Label = "In Review",      Value = Model.InReviewFeedback, Color = "text-blue-400"  },
+                new { Label = "Bug Reports",    Value = Model.BugReports,       Color = "text-red-400"   },
+                };
+                }
+                @foreach (var row in feedbackRows)
+                {
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-500">@row.Label</span>
+                        <span class="text-sm font-semibold @row.Color">@row.Value</span>
+                    </div>
+                }
+            </div>
+            <div class="mt-5 pt-4 border-t border-surface-border">
+                <a href="@Url.Action("Index", "AdminFeedback")"
+                   class="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1">
+                    View all reports
+                    <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- AI Stats -->
+        <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+            <div class="flex items-center gap-2 mb-5">
+                <i data-lucide="sparkles" class="w-4 h-4 text-slate-500"></i>
+                <h3 class="text-sm font-semibold text-white">AI Usage</h3>
+            </div>
+            <div class="space-y-3">
+                @{
+                    var aiRows = new[]
+                    {
+                new { Label = "Total Summaries",      Value = Model.TotalSummaries,        Color = "text-slate-300" },
+                new { Label = "Edited by Users",      Value = Model.EditedSummaries,        Color = "text-emerald-400" },
+                new { Label = "Unprocessed Transcripts", Value = Model.UnprocessedTranscripts, Color = "text-amber-400" },
+                new { Label = "AI-Generated Notes",   Value = Model.AiGeneratedNotes,       Color = "text-violet-400" },
+                };
+                }
+                @foreach (var row in aiRows)
+                {
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-500">@row.Label</span>
+                        <span class="text-sm font-semibold @row.Color">@row.Value</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Live Now -->
+        <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+            <div class="flex items-center gap-2 mb-5">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <h3 class="text-sm font-semibold text-white">Live Now</h3>
+            </div>
+            <div class="space-y-3">
+                @{
+                    var liveRows = new[]
+                    {
+                new { Label = "Active Meetings",  Value = Model.LiveMeetingsNow, Color = "text-emerald-400" },
+                new { Label = "Active Users",     Value = Model.ActiveUsers,     Color = "text-brand-400"   },
+                new { Label = "Pending Tasks",    Value = Model.PendingTasks,    Color = "text-amber-400"   },
+                new { Label = "Open Feedback",    Value = Model.OpenFeedback,    Color = "text-red-400"     },
+                };
+                }
+                @foreach (var row in liveRows)
+                {
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-500">@row.Label</span>
+                        <span class="text-sm font-semibold @row.Color">@row.Value</span>
+                    </div>
+                }
+            </div>
+            <div class="mt-5 pt-4 border-t border-surface-border">
+                <a href="@Url.Action("Index", "AdminUsers")"
+                   class="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1">
+                    Manage users
+                    <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Recent Activity Feed ──────────────────────────────── -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+            <div class="flex items-center gap-2">
+                <i data-lucide="activity" class="w-4 h-4 text-slate-500"></i>
+                <h3 class="text-sm font-semibold text-white">Recent Activity</h3>
+            </div>
+            <span class="text-xs text-slate-600">Last 10 events</span>
+        </div>
+
+        @if (!Model.RecentActivities.Any())
+        {
+            <div class="flex items-center justify-center py-12">
+                <p class="text-slate-600 text-sm">No recent activity</p>
+            </div>
+        }
+        else
+        {
+            <div class="divide-y divide-surface-border">
+                @foreach (var activity in Model.RecentActivities)
+                {
+                    var activityConfig = activity.Type switch
+                    {
+                        "Meeting" => (Icon: "video", Color: "text-violet-400", Bg: "bg-violet-400/10"),
+                        "User" => (Icon: "user-plus", Color: "text-brand-400", Bg: "bg-brand-400/10"),
+                        "Feedback" => (Icon: "flag", Color: "text-amber-400", Bg: "bg-amber-400/10"),
+                        "Task" => (Icon: "check-square", Color: "text-emerald-400", Bg: "bg-emerald-400/10"),
+                        _ => (Icon: "circle", Color: "text-slate-400", Bg: "bg-slate-400/10")
+                    };
+
+                    <div class="flex items-center gap-4 px-6 py-3.5 hover:bg-surface-hover transition-colors">
+                        <div class="w-8 h-8 rounded-lg @activityConfig.Bg flex items-center justify-center shrink-0">
+                            <i data-lucide="@activityConfig.Icon" class="w-3.5 h-3.5 @activityConfig.Color"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-slate-300 truncate">@activity.Description</p>
+                            <p class="text-xs text-slate-600">by @activity.ActorName</p>
+                        </div>
+                        <time class="text-xs text-slate-600 shrink-0">
+                            @activity.OccurredAt.ToString("MMM dd, HH:mm")
+                        </time>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+</div>
+
+@section Scripts {
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        Chart.defaults.color = '#64748b';
+        Chart.defaults.borderColor = '#1f2637';
+        Chart.defaults.font.family = 'DM Sans, sans-serif';
+
+        const gradientBlue = (ctx) => {
+            const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+            g.addColorStop(0, 'rgba(51,102,255,0.25)');
+            g.addColorStop(1, 'rgba(51,102,255,0)');
+            return g;
+        };
+
+        const gradientViolet = (ctx) => {
+            const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+            g.addColorStop(0, 'rgba(167,139,250,0.25)');
+            g.addColorStop(1, 'rgba(167,139,250,0)');
+            return g;
+        };
+
+        // ── User Growth ──────────────────────────────────────────
+        new Chart(document.getElementById('userGrowthChart'), {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(userGrowthLabels),
+                datasets: [{
+                    label: 'New Users',
+                    data: @Html.Raw(userGrowthValues),
+                    borderColor: '#3366ff',
+                    backgroundColor: gradientBlue,
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#3366ff',
+                    pointBorderColor: '#161b27',
+                    pointBorderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: '#1f2637' }, ticks: { font: { size: 11 } } },
+                    y: { grid: { color: '#1f2637' }, ticks: { precision: 0, font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+
+        // ── Meeting Activity ─────────────────────────────────────
+        new Chart(document.getElementById('meetingChart'), {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(meetingLabels),
+                datasets: [{
+                    label: 'Meetings',
+                    data: @Html.Raw(meetingValues),
+                    backgroundColor: 'rgba(167,139,250,0.2)',
+                    borderColor: '#a78bfa',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: '#1f2637' }, ticks: { font: { size: 11 } } },
+                    y: { grid: { color: '#1f2637' }, ticks: { precision: 0, font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    </script>
+}

@@ -68,6 +68,7 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<IDashboardRepository, DashboardRepository>();
             services.AddScoped<IFeedbackRepository, FeedbackRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<ISystemHealthRepository, SystemHealthRepository>();
 
             // Services
             services.AddScoped<IAuthService, AuthService>();
