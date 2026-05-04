@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35027.167
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeetIQ.Interface", "MeetIQ.Interface\MeetIQ.Interface.csproj", "{FA7BAFA5-08FE-42D1-B2A5-E428F9A80E05}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MeetIQ.Web", "MeetIQ.Web\MeetIQ.Web.csproj", "{FA7BAFA5-08FE-42D1-B2A5-E428F9A80E05}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeetIQ.Application", "MeetIQ.Application\MeetIQ.Application.csproj", "{0337C8FD-8983-4327-85DB-344DFC588928}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MeetIQ.Application", "MeetIQ.Application\MeetIQ.Application.csproj", "{0337C8FD-8983-4327-85DB-344DFC588928}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeetIQ.Domain", "MeetIQ.Domain\MeetIQ.Domain.csproj", "{629E1DBF-BF94-4A9E-912C-BCB6CD558525}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MeetIQ.Domain", "MeetIQ.Domain\MeetIQ.Domain.csproj", "{629E1DBF-BF94-4A9E-912C-BCB6CD558525}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeetIQ.Infrastructure", "MeetIQ.Infrastructure\MeetIQ.Infrastructure.csproj", "{71C88AEC-9B3C-4697-A8CC-42FF92AD06B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MeetIQ.Infrastructure", "MeetIQ.Infrastructure\MeetIQ.Infrastructure.csproj", "{71C88AEC-9B3C-4697-A8CC-42FF92AD06B4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

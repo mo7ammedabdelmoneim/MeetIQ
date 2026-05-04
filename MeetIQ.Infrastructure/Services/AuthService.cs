@@ -1,4 +1,5 @@
-﻿using MeetIQ.Application.Common.Exceptions;
+﻿using MeetIQ.Application.Common.Constants;
+using MeetIQ.Application.Common.Exceptions;
 using MeetIQ.Application.Features.Auth.Commands.LoginCommand;
 using MeetIQ.Application.Features.Auth.Commands.RegisterCommand;
 using MeetIQ.Application.Features.Auth.DTOs;
@@ -29,7 +30,7 @@ namespace MeetIQ.Infrastructure.Services
         {
             var existingUser = await _userManager.FindByEmailAsync(dto.Email);
             if (existingUser != null)
-                throw new Exception("Email already exists");
+                throw new BadRequestException("Email already exists");
 
             var user = new ApplicationUser
             {
@@ -41,11 +42,11 @@ namespace MeetIQ.Infrastructure.Services
             var result = await _userManager.CreateAsync(user, dto.Password);
 
             if (!result.Succeeded)
-                throw new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description)));
+                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            if (await roleManager.RoleExistsAsync("User"))
+            if (await roleManager.RoleExistsAsync(Roles.User))
             {
-                await _userManager.AddToRoleAsync(user, "User");
+                await _userManager.AddToRoleAsync(user, Roles.User);
             }
 
             var roles = await _userManager.GetRolesAsync(user);
@@ -179,9 +180,9 @@ namespace MeetIQ.Infrastructure.Services
                 if (!createResult.Succeeded)
                     throw new BadRequestException(string.Join(", ", createResult.Errors.Select(e => e.Description)));
 
-                if (await roleManager.RoleExistsAsync("User"))
+                if (await roleManager.RoleExistsAsync(Roles.User))
                 {
-                    await _userManager.AddToRoleAsync(user, "User");
+                    await _userManager.AddToRoleAsync(user, Roles.User);
                 }
             }
 

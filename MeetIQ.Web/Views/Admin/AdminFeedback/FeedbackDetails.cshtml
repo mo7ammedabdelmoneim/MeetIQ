@@ -1,0 +1,96 @@
+﻿@model FeedbackDetailsDto
+
+@{
+    ViewData["Title"] = "Feedback Details";
+    var statusColors = new Dictionary<FeedbackStatus, string>
+    {
+        { FeedbackStatus.Open, "text-amber-400 bg-amber-400/10 border-amber-400/20" },
+        { FeedbackStatus.InReview, "text-blue-400 bg-blue-400/10 border-blue-400/20" },
+        { FeedbackStatus.Resolved, "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
+        { FeedbackStatus.Closed, "text-slate-400 bg-slate-400/10 border-slate-400/20" }
+    };
+}
+
+<div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Back -->
+    <a href="@Url.Action("Index")"
+       class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Back to Reports
+    </a>
+
+    <!-- Success banner -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+            <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+            @TempData["Success"]
+        </div>
+    }
+
+    <!-- Details Card -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl divide-y divide-surface-border">
+
+        <!-- Reporter Info -->
+        <div class="px-6 py-5 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-brand-900 border border-brand-700 flex items-center justify-center
+                            text-brand-300 text-sm font-semibold shrink-0">
+                    @Model.ReporterName.Substring(0, 1).ToUpper()
+                </div>
+                <div>
+                    <p class="text-white font-medium">@Model.ReporterName</p>
+                    <p class="text-xs text-slate-500">@Model.ReporterEmail</p>
+                </div>
+            </div>
+            <span class="text-xs font-semibold px-3 py-1.5 rounded-full border @statusColors[Model.Status]">
+                @Model.Status
+            </span>
+        </div>
+
+        <!-- Meta -->
+        <div class="px-6 py-4 grid grid-cols-2 gap-4">
+            <div>
+                <p class="text-xs text-slate-600 uppercase tracking-wider mb-1">Type</p>
+                <p class="text-sm text-slate-300 font-medium">@Model.Type</p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-600 uppercase tracking-wider mb-1">Submitted</p>
+                <p class="text-sm text-slate-300 font-medium">@Model.CreatedAt.ToString("MMM dd, yyyy — HH:mm UTC")</p>
+            </div>
+        </div>
+
+        <!-- Message -->
+        <div class="px-6 py-5">
+            <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Message</p>
+            <p class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">@Model.Message</p>
+        </div>
+    </div>
+
+    <!-- Update Status Card -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+        <h3 class="text-sm font-semibold text-white mb-4">Update Status</h3>
+
+        <form asp-controller="AdminFeedback" asp-action="UpdateStatus" method="post" class="flex items-center gap-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="FeedbackId" value="@Model.Id" />
+
+            <select name="NewStatus"
+                    class="flex-1 bg-surface border border-surface-border rounded-xl px-3 py-2.5 text-sm text-slate-300
+                           focus:outline-none focus:border-brand-600 transition-colors">
+                @foreach (FeedbackStatus s in Enum.GetValues(typeof(FeedbackStatus)))
+                {
+                    <option value="@((int)s)" selected="@(Model.Status == s)">@s</option>
+                }
+            </select>
+
+            <button type="submit"
+                    class="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500
+                           text-white text-sm font-semibold rounded-xl transition-colors shadow-glow shrink-0">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                Save
+            </button>
+        </form>
+    </div>
+</div>

@@ -65,7 +65,7 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<INoteTagRepository, NoteTagRepository>();
             services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
             services.AddScoped<IDashboardRepository, DashboardRepository>();
-
+            services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 
 
             // Services
