@@ -149,9 +149,10 @@
 
         <!-- Navigation -->
         <nav class="flex-1 px-3 py-4 space-y-0.5">
+            <p class="px-3 pb-2 text-[10px] uppercase tracking-widest text-slate-600 font-semibold">Workspace</p>
 
-            <a href="/" class="@NavClass("/")">
-                <i data-lucide="layout-dashboard" class="@IconClass("/")"></i>
+                <a href="/Home/Dashboard" class="@NavClass("/Home/Dashboard")">
+                    <i data-lucide="layout-dashboard" class="@IconClass("/Home/Dashboard")"></i>
                 Dashboard
             </a>
 
@@ -324,5 +325,8 @@
 <script src="~/js/site.js" asp-append-version="true"></script>
 
 @await RenderSectionAsync("Scripts", required: false)
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>

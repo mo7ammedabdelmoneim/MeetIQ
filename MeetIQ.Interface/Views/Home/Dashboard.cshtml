@@ -1,0 +1,369 @@
+﻿@using MeetIQ.Domain.Enums
+@using System.Text.RegularExpressions
+@model MeetIQ.Application.Features.Dashboard.DTOs.DashboardDto
+
+@{
+    ViewData["Title"] = "Dashboard";
+    var hour = DateTime.Now.Hour;
+    var greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+    // Helper: strip HTML tags for plain-text previews
+    string StripHtml(string html)
+    {
+        if (string.IsNullOrEmpty(html)) return string.Empty;
+        return Regex.Replace(html, "<[^>]*>", " ")
+                    .Replace("&nbsp;", " ")
+                    .Replace("&amp;", "&")
+                    .Replace("&lt;", "<")
+                    .Replace("&gt;", ">")
+                    .Replace("&quot;", "\"")
+                    .Trim();
+    }
+}
+
+<style>
+    .notes-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .note-card {
+        display: block;
+        border-bottom: 1px solid #1f2637;
+        text-decoration: none;
+    }
+
+        .note-card:last-child {
+            border-bottom: none;
+        }
+
+    @@media (min-width: 640px) {
+        .notes-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .note-card:nth-child(odd) {
+            border-right: 1px solid #1f2637;
+        }
+
+        .note-card {
+            border-bottom: 1px solid #1f2637;
+        }
+
+            .note-card:nth-last-child(-n+2) {
+                border-bottom: none;
+            }
+    }
+</style>
+
+<!-- ══════════ HEADER GREETING ══════════ -->
+<div class="mb-8 flex items-center justify-between">
+    <div>
+        <h2 class="text-2xl font-semibold text-white tracking-tight">
+            @greeting, <span class="text-brand-400">@Model.UserFullName.Split(' ')[0]</span> 👋
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">Here's what's happening with your meetings today.</p>
+    </div>
+    <a href="/Meetings/Create"
+       class="hidden sm:flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500
+              text-white text-sm font-semibold rounded-xl transition-colors shadow-glow">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        New Meeting
+    </a>
+</div>
+
+<!-- ══════════ STATS CARDS ══════════ -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+    @{
+        var stats = new[]
+        {
+    new { Label = "Meetings Hosted",     Value = Model.Stats.TotalMeetingsHosted.ToString(),            Icon = "video",         Color = "text-brand-400",   Bg = "bg-brand-900/40",   Href = "/Meetings" },
+    new { Label = "Upcoming",            Value = Model.Stats.UpcomingMeetingsCount.ToString(),          Icon = "calendar-clock", Color = "text-violet-400",  Bg = "bg-violet-900/40",  Href = "/Calendar" },
+    new { Label = "Pending Tasks",       Value = Model.Stats.PendingTasksCount.ToString(),              Icon = "check-square",   Color = "text-amber-400",   Bg = "bg-amber-900/40",   Href = "/Tasks" },
+    new { Label = "Notes",               Value = Model.Stats.TotalNotesCount.ToString(),                Icon = "notebook-pen",   Color = "text-emerald-400", Bg = "bg-emerald-900/40", Href = "/Notes" },
+    new { Label = "Pending Transcripts", Value = Model.Stats.UnprocessedTranscriptsCount.ToString(),    Icon = "mic-2",          Color = "text-rose-400",    Bg = "bg-rose-900/40",    Href = "/Transcripts" },
+    };
+    }
+
+    @foreach (var stat in stats)
+    {
+        <a href="@stat.Href"
+           class="group bg-surface-card border border-surface-border rounded-2xl p-4
+                  hover:border-brand-600/50 hover:shadow-glow transition-all duration-200 cursor-pointer">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-9 h-9 rounded-xl @stat.Bg flex items-center justify-center shrink-0">
+                    <i data-lucide="@stat.Icon" class="w-4 h-4 @stat.Color"></i>
+                </div>
+                <i data-lucide="arrow-up-right"
+                   class="w-3.5 h-3.5 text-slate-600 group-hover:text-brand-400 transition-colors"></i>
+            </div>
+            <p class="text-2xl font-bold text-white">@stat.Value</p>
+            <p class="text-xs text-slate-500 mt-0.5">@stat.Label</p>
+        </a>
+    }
+</div>
+
+<!-- ══════════ MAIN GRID ══════════ -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    <!-- ── Upcoming Meetings (spans 2 cols) ── -->
+    <div class="xl:col-span-2 bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-surface-border">
+            <div class="flex items-center gap-2">
+                <i data-lucide="calendar-clock" class="w-4 h-4 text-brand-400"></i>
+                <h3 class="text-sm font-semibold text-white">Upcoming Meetings</h3>
+            </div>
+            <a href="/Meetings" class="text-xs text-brand-400 hover:text-brand-300 transition-colors">View all →</a>
+        </div>
+
+        @if (!Model.UpcomingMeetings.Any())
+        {
+            <div class="flex flex-col items-center justify-center py-14 text-center px-6">
+                <div class="w-12 h-12 rounded-2xl bg-surface-border flex items-center justify-center mb-3">
+                    <i data-lucide="calendar-x" class="w-5 h-5 text-slate-500"></i>
+                </div>
+                <p class="text-sm text-slate-400 font-medium">No upcoming meetings</p>
+                <p class="text-xs text-slate-600 mt-1">Schedule one to get started</p>
+                <a href="/Meetings/Create"
+                   class="mt-4 px-4 py-1.5 text-xs font-semibold bg-brand-600 hover:bg-brand-500
+                          text-white rounded-lg transition-colors">
+                    + New Meeting
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="divide-y divide-surface-border">
+                @foreach (var meeting in Model.UpcomingMeetings)
+                {
+                    var timeLeft = meeting.ScheduledAt - DateTime.UtcNow;
+                    var timeLabel = timeLeft.TotalDays >= 1
+                    ? $"in {(int)timeLeft.TotalDays}d"
+                    : timeLeft.TotalHours >= 1
+                    ? $"in {(int)timeLeft.TotalHours}h"
+                    : $"in {(int)timeLeft.TotalMinutes}m";
+
+                    <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-surface-hover transition-colors group">
+                        <div class="shrink-0 w-14 text-center">
+                            <p class="text-xs font-bold text-brand-400">@meeting.ScheduledAt.ToString("HH:mm")</p>
+                            <p class="text-[10px] text-slate-600">@meeting.ScheduledAt.ToString("MMM dd")</p>
+                        </div>
+
+                        <div class="w-1.5 h-1.5 rounded-full bg-brand-600 shrink-0"></div>
+
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-white truncate group-hover:text-brand-300 transition-colors">
+                                @meeting.Title
+                            </p>
+                            <div class="flex items-center gap-3 mt-0.5">
+                                <span class="flex items-center gap-1 text-[11px] text-slate-500">
+                                    <i data-lucide="users" class="w-3 h-3"></i>
+                                    @meeting.ParticipantsCount participants
+                                </span>
+                                @if (meeting.IsHost)
+                                {
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand-900/60 text-brand-400 border border-brand-800">
+                                        Host
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <span class="shrink-0 text-[11px] font-medium text-slate-500">@timeLabel</span>
+
+                        @if (!string.IsNullOrEmpty(meeting.JitsiRoomId))
+                        {
+                            <a href="/Meetings/@meeting.Id/Join"
+                               class="shrink-0 px-3 py-1 text-xs font-semibold bg-brand-600 hover:bg-brand-500
+                                      text-white rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                                Join
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- ── Recent Tasks ── -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-surface-border">
+            <div class="flex items-center gap-2">
+                <i data-lucide="check-square" class="w-4 h-4 text-amber-400"></i>
+                <h3 class="text-sm font-semibold text-white">Recent Tasks</h3>
+            </div>
+            <a href="/Tasks" class="text-xs text-brand-400 hover:text-brand-300 transition-colors">View all →</a>
+        </div>
+
+        @if (!Model.RecentTasks.Any())
+        {
+            <div class="flex flex-col items-center justify-center py-14 text-center px-6">
+                <div class="w-12 h-12 rounded-2xl bg-surface-border flex items-center justify-center mb-3">
+                    <i data-lucide="inbox" class="w-5 h-5 text-slate-500"></i>
+                </div>
+                <p class="text-sm text-slate-400 font-medium">No tasks yet</p>
+            </div>
+        }
+        else
+        {
+            <div class="divide-y divide-surface-border">
+                @foreach (var task in Model.RecentTasks)
+                {
+                    var priorityInfo = task.Priority switch
+                    {
+                        2 => ("text-rose-400", "bg-rose-900/40", "High"),
+                        1 => ("text-amber-400", "bg-amber-900/40", "Medium"),
+                        _ => ("text-slate-400", "bg-slate-800/40", "Low")
+                    };
+                    var statusDone = task.Status == 2;
+
+                    <a href="/Tasks/Details/@task.Id"
+                       class="flex items-start gap-3 px-5 py-3 hover:bg-surface-hover transition-colors group">
+                        <div class="mt-1 shrink-0 w-4 h-4 rounded-full border-2
+                                    @(statusDone ? "bg-emerald-500 border-emerald-500" : "border-slate-600 group-hover:border-brand-500")
+                                    flex items-center justify-center transition-colors">
+                            @if (statusDone)
+                            {
+                                <i data-lucide="check" class="w-2.5 h-2.5 text-white"></i>
+                            }
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-white truncate @(statusDone ? "line-through text-slate-500" : "")">
+                                @task.Title
+                            </p>
+                            <div class="flex items-center gap-2 mt-1 flex-wrap">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium @priorityInfo.Item1 @priorityInfo.Item2">
+                                    @priorityInfo.Item3
+                                </span>
+
+                                @if (task.IsAutoGenerated)
+                                {
+                                    <span class="flex items-center gap-0.5 text-[10px] text-violet-400">
+                                        <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> AI
+                                    </span>
+                                }
+
+                                @if (task.DueDate.HasValue)
+                                {
+                                    var overdue = task.DueDate.Value < DateTime.UtcNow && !statusDone;
+                                    <span class="text-[10px] @(overdue ? "text-rose-400" : "text-slate-600")">
+                                        @task.DueDate.Value.ToString("MMM dd")
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- ── Recent Notes ── -->
+    <div class="xl:col-span-2 bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-surface-border">
+            <div class="flex items-center gap-2">
+                <i data-lucide="notebook-pen" class="w-4 h-4 text-emerald-400"></i>
+                <h3 class="text-sm font-semibold text-white">Recent Notes</h3>
+            </div>
+            <a href="/Notes" class="text-xs text-brand-400 hover:text-brand-300 transition-colors">View all →</a>
+        </div>
+
+        @if (!Model.RecentNotes.Any())
+        {
+            <div class="flex flex-col items-center justify-center py-14 text-center px-6">
+                <div class="w-12 h-12 rounded-2xl bg-surface-border flex items-center justify-center mb-3">
+                    <i data-lucide="file-text" class="w-5 h-5 text-slate-500"></i>
+                </div>
+                <p class="text-sm text-slate-400 font-medium">No notes yet</p>
+            </div>
+        }
+        else
+        {
+            <div class="notes-grid">
+                @foreach (var note in Model.RecentNotes)
+                {
+                    <a href="/Notes/Details/@note.Id" class="note-card group p-5 hover:bg-surface-hover transition-colors">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <p class="text-sm font-medium text-white group-hover:text-brand-300 transition-colors line-clamp-1">
+                                @note.Title
+                            </p>
+                            @if (note.IsAutoGenerated)
+                            {
+                                <span class="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-violet-400 bg-violet-900/40">
+                                    <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> AI
+                                </span>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(note.Content))
+                        {
+                            <!-- ✅ FIX: Strip HTML tags before displaying the preview -->
+                            <p class="text-xs text-slate-500 line-clamp-2">@StripHtml(note.Content)</p>
+                        }
+
+                        <div class="flex items-center gap-2 mt-3 text-[11px] text-slate-600">
+                            @if (!string.IsNullOrEmpty(note.MeetingTitle))
+                            {
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="video" class="w-3 h-3"></i>
+                                    <span class="truncate max-w-[120px]">@note.MeetingTitle</span>
+                                </span>
+                                <span>·</span>
+                            }
+                            @if (note.CreatedAt.HasValue)
+                            {
+                                <span>@note.CreatedAt.Value.ToString("MMM dd")</span>
+                            }
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- ── Quick Actions ── -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-surface-border">
+            <div class="flex items-center gap-2">
+                <i data-lucide="zap" class="w-4 h-4 text-brand-400"></i>
+                <h3 class="text-sm font-semibold text-white">Quick Actions</h3>
+            </div>
+        </div>
+
+        <div class="p-4 space-y-2">
+            @{
+                var actions = new[]
+                {
+            new { Label = "Schedule Meeting", Icon = "video",        Href = "/Meetings/Create", Color = "text-brand-400",   Bg = "bg-brand-900/40"   },
+            new { Label = "Create Task",      Icon = "check-square", Href = "/Tasks/Create",    Color = "text-amber-400",   Bg = "bg-amber-900/40"   },
+            new { Label = "New Note",         Icon = "notebook-pen", Href = "/Notes/Create",    Color = "text-emerald-400", Bg = "bg-emerald-900/40" },
+            new { Label = "Transcripts",      Icon = "mic-2",        Href = "/Transcripts",     Color = "text-violet-400",  Bg = "bg-violet-900/40"  },
+            new { Label = "AI Summaries",     Icon = "sparkles",     Href = "/Summaries",       Color = "text-rose-400",    Bg = "bg-rose-900/40"    },
+            };
+            }
+
+            @foreach (var action in actions)
+            {
+                <a href="@action.Href"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-hover transition-colors group">
+                    <div class="w-8 h-8 rounded-lg @action.Bg flex items-center justify-center shrink-0">
+                        <i data-lucide="@action.Icon" class="w-3.5 h-3.5 @action.Color"></i>
+                    </div>
+                    <span class="text-sm text-slate-300 group-hover:text-white transition-colors flex-1">
+                        @action.Label
+                    </span>
+                    <i data-lucide="chevron-right"
+                       class="w-3.5 h-3.5 text-slate-600 group-hover:text-brand-400 transition-colors"></i>
+                </a>
+            }
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        lucide.createIcons();
+    </script>
+}
