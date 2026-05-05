@@ -49,27 +49,14 @@ namespace MeetIQ.Infrastructure.Services
                 await _userManager.AddToRoleAsync(user, Roles.User);
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id),
-                    new Claim("FullName", user.FullName ?? ""),
-                    new Claim("ProfileImage", user.AvatarUrl ?? "/images/users/default-user.png"),
-                    new Claim(ClaimTypes.Email, user.Email)
-                };
-
-            foreach (var role in roles)
-                claims.Add(new Claim(ClaimTypes.Role, role));
-
-            await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, claims);
+            await _signInManager.SignInAsync(user, isPersistent: false);
 
             return new AuthResponse
             {
                 UserId = user.Id,
                 Email = user.Email,
                 FullName = user.FullName,
-                Roles = roles.ToList()
+                Roles = (await _userManager.GetRolesAsync(user)).ToList()
             };
         }
 
@@ -84,35 +71,17 @@ namespace MeetIQ.Infrastructure.Services
             if (!isValid)
                 throw new BadRequestException("Invalid email or password");
 
-            if(!user.IsActive)
+            if (!user.IsActive)
                 throw new BadRequestException("Inactive email");
 
-
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, user.Id),
-                        new Claim("FullName", user.FullName ?? ""),
-                        new Claim("ProfileImage", user.AvatarUrl ?? "/images/users/default-user.png"),
-                        new Claim(ClaimTypes.Email, user.Email)
-                    };
-
-            foreach (var role in roles)
-                claims.Add(new Claim(ClaimTypes.Role, role));
-
-            await _signInManager.SignInWithClaimsAsync(
-                user,
-                isPersistent: dto.RememberMe,
-                claims
-            );
+            await _signInManager.SignInAsync(user, isPersistent: dto.RememberMe);
 
             return new AuthResponse
             {
                 UserId = user.Id,
                 FullName = user.FullName,
                 Email = user.Email,
-                Roles = roles.ToList(),
+                Roles = (await _userManager.GetRolesAsync(user)).ToList()
             };
         }
 
@@ -134,27 +103,14 @@ namespace MeetIQ.Infrastructure.Services
 
                 await _signInManager.SignOutAsync();
 
-                var existingUserRoles = await _userManager.GetRolesAsync(existingUser);
-
-                var existingUserClaims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, existingUser.Id),
-                        new Claim("FullName", existingUser.FullName ?? ""),
-                        new Claim("ProfileImage", existingUser.AvatarUrl ?? "/images/users/default-user.png"),
-                        new Claim(ClaimTypes.Email, existingUser.Email)
-                    };
-
-                foreach (var role in existingUserRoles)
-                    existingUserClaims.Add(new Claim(ClaimTypes.Role, role));
-
-                await _signInManager.SignInWithClaimsAsync(existingUser, false, existingUserClaims);
+                await _signInManager.SignInAsync(existingUser, false);
 
                 return new AuthResponse
                 {
                     UserId = existingUser.Id,
                     Email = existingUser.Email,
                     FullName = existingUser.FullName,
-                    Roles = existingUserRoles.ToList()
+                    Roles = (await _userManager.GetRolesAsync(existingUser)).ToList()
                 };
             }
 
@@ -175,8 +131,7 @@ namespace MeetIQ.Infrastructure.Services
                     FullName = name,
                     UserName = email,
                     Email = email,
-                    EmailConfirmed = true,
-                    AvatarUrl = picture ?? "/images/users/default-user.png"
+                    EmailConfirmed = true
                 };
 
                 var createResult = await _userManager.CreateAsync(user);
@@ -199,20 +154,8 @@ namespace MeetIQ.Infrastructure.Services
                 if (!addLoginResult.Succeeded)
                     throw new Exception(string.Join(", ", addLoginResult.Errors.Select(e => e.Description)));
             }
-            var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id),
-                    new Claim("FullName", user.FullName ?? ""),
-                    new Claim("ProfileImage", user.AvatarUrl ?? "/images/users/default-user.png"),
-                    new Claim(ClaimTypes.Email, user.Email)
-            };
 
-            var roles = await _userManager.GetRolesAsync(user);
-
-            foreach (var role in roles)
-                claims.Add(new Claim(ClaimTypes.Role, role));
-
-            await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, claims);
+            await _signInManager.SignInAsync(user, isPersistent: false);
 
             return new AuthResponse
             {
@@ -243,6 +186,25 @@ namespace MeetIQ.Infrastructure.Services
         public async Task AddToRoleAsync(ApplicationUser user, string role)
         {
             await _userManager.AddToRoleAsync(user, role);
+        }
+
+
+        public async Task<(bool Succeeded, IEnumerable<string> Errors)> ChangePasswordAsync(
+                                                                                            string userId,
+                                                                                            string currentPassword,
+                                                                                            string newPassword)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return (false, new[] { "User not found" });
+
+            var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+
+            return (
+                result.Succeeded,
+                result.Errors.Select(e => e.Description)
+            );
         }
     }
 }

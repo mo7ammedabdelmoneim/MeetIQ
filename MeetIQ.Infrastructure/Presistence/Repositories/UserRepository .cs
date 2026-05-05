@@ -7,6 +7,7 @@ using MeetIQ.Domain.Entities;
 using MeetIQ.Infrastructure.Presistence.Repositories;
 using MeetIQ.Infrastructure.Presistence;
 using SqlKata.Execution;
+using MeetIQ.Application.Features.Profile.DTOs;
 
 namespace MeetIQ.Infrastructure.Persistence.Repositories
 {
@@ -117,6 +118,45 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 Page = query.Page,
                 PageSize = query.PageSize
             };
+        }
+
+
+        public async Task<MyProfileDto?> GetMyProfileAsync(string userId)
+        {
+            var profile = await db.Query("AspNetUsers as u")
+                .LeftJoin("AspNetUserRoles as ur", "ur.UserId", "u.Id")
+                .LeftJoin("AspNetRoles as r", "r.Id", "ur.RoleId")
+                .Select(
+                    "u.Id",
+                    "u.FullName",
+                    "u.Email",
+                    "u.AvatarUrl",
+                    "u.IsActive",
+                    "u.CreatedAt",
+                    "r.Name as Role"
+                )
+                .Where("u.Id", userId)
+                .FirstOrDefaultAsync<MyProfileDto>();
+
+            if (profile == null) return null;
+
+            profile.TotalMeetings = await db.Query("Meetings").Where("HostId", userId).CountAsync<int>();
+            profile.TotalNotes = await db.Query("Notes").Where("AuthorId", userId).CountAsync<int>();
+            profile.TotalFeedback = await db.Query("FeedbackReports").Where("ReporterId", userId).CountAsync<int>();
+
+            profile.TotalTasks = await db.Query("TaskItems").Where("UserId", userId).Where("IsDeleted", false).CountAsync<int>();
+            profile.PendingTasks = await db.Query("TaskItems").Where("UserId", userId).Where("IsDeleted", false)
+                                         .Where("Status", (int)Domain.Enums.TaskStatus.ToDo).CountAsync<int>();
+            profile.CompletedTasks = await db.Query("TaskItems").Where("UserId", userId).Where("IsDeleted", false)
+                                         .Where("Status", (int)Domain.Enums.TaskStatus.Done).CountAsync<int>();
+
+            profile.LastMeetingAt = await db.Query("Meetings")
+                                         .Where("HostId", userId)
+                                         .OrderByDesc("ScheduledAt")
+                                         .Select("ScheduledAt")
+                                         .FirstOrDefaultAsync<DateTime?>();
+
+            return profile;
         }
     }
 }

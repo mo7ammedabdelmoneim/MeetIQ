@@ -28,8 +28,4 @@
     <ProjectReference Include="..\MeetIQ.Domain\MeetIQ.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Features\NewFolder\" />
-  </ItemGroup>
-
 </Project>

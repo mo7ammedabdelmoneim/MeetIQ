@@ -3,6 +3,7 @@ using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Application.Services;
 using MeetIQ.Domain.Entities;
+using MeetIQ.Infrastructure.Identity;
 using MeetIQ.Infrastructure.Persistence.Repositories;
 using MeetIQ.Infrastructure.Presistence;
 using MeetIQ.Infrastructure.Presistence.Repositories;
@@ -54,6 +55,8 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+            services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>,AppClaimsPrincipalFactory>();
+
             // Repositories
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -70,10 +73,12 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<ISystemHealthRepository, SystemHealthRepository>();
 
+
             // Services
             services.AddScoped<IAuthService, AuthService>();
             services.AddSingleton<JitsiTokenService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
             return services;
         }

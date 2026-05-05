@@ -219,19 +219,40 @@
 
         <!-- User card (bottom) -->
         <div class="px-3 py-3 border-t border-surface-border">
-            <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-hover transition-colors cursor-pointer group">
-                <!-- Avatar placeholder -->
-                <div class="w-8 h-8 rounded-full bg-brand-900 border border-brand-700 flex items-center justify-center text-brand-300 text-xs font-semibold shrink-0">
-                    @(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
-                </div>
+            <a href="/Profile"
+                class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-hover transition-colors group">
+
+                <!-- Avatar -->
+                @{
+                    var avatarUrl = User.FindFirst("AvatarUrl")?.Value;
+                    var fullName = User.FindFirst("FullName")?.Value ?? "User";
+                    var initial = fullName.Substring(0, 1).ToUpper();
+                }
+
+                @if (!string.IsNullOrEmpty(avatarUrl))
+                {
+                    <img src="@avatarUrl" alt="@fullName"
+                            class="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-surface-border" />
+                }
+                else
+                {
+                    <div class="w-8 h-8 rounded-full bg-brand-900 border border-brand-700
+                    flex items-center justify-center text-brand-300 text-xs font-semibold shrink-0">
+                        @initial
+                    </div>
+                }
+
                 <div class="min-w-0 flex-1">
-                        <p class="text-sm text-white font-medium truncate">@(User.FindFirst("FullName")?.Value ?? "ME")</p>
+                    <p class="text-sm text-white font-medium truncate group-hover:text-brand-300 transition-colors">
+                        @fullName
+                    </p>
                     <p class="text-[11px] text-slate-500 truncate">
                         @(User.IsInRole(Roles.Admin) ? "Administrator" : "Member")
                     </p>
                 </div>
-                <i data-lucide="chevrons-up-down" class="w-4 h-4 text-slate-600 group-hover:text-slate-400 shrink-0"></i>
-            </div>
+
+                <i data-lucide="settings" class="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 shrink-0 transition-colors"></i>
+            </a>
         </div>
     </aside>
 
@@ -272,6 +293,7 @@
                    title="Report an issue">
                     <i data-lucide="flag" class="w-[18px] h-[18px]"></i>
                 </a>
+
 
                 @if (User.Identity?.IsAuthenticated == true)
                 {

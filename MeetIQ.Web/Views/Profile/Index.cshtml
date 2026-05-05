@@ -1,0 +1,517 @@
+﻿@using MeetIQ.Application.Features.Profile.DTOs
+@using MeetIQ.Web.ViewModels.Profile
+@model MyProfileDto
+
+@{
+    ViewData["Title"] = "My Profile";
+    var updateModel = ViewBag.UpdateModel as UpdateProfileViewModel;
+    var passwordModel = ViewBag.PasswordModel as ChangePasswordViewModel;
+    var activeTab = ViewBag.ActiveTab as string ?? "profile";
+}
+
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <!-- ── Header Card ─────────────────────────────────────── -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+        <div class="flex items-center gap-5">
+            <div class="relative shrink-0">
+                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                {
+                    <img src="@Model.AvatarUrl" alt="@Model.FullName"
+                         class="w-16 h-16 rounded-full object-cover ring-2 ring-surface-border" />
+                }
+                else
+                {
+                    <div class="w-16 h-16 rounded-full bg-brand-900 border-2 border-brand-700
+                                flex items-center justify-center text-brand-300 text-2xl font-semibold">
+                        @Model.FullName.Substring(0, 1).ToUpper()
+                    </div>
+                }
+            </div>
+            <div class="flex-1 min-w-0">
+                <h2 class="text-xl font-semibold text-white truncate">@Model.FullName</h2>
+                <p class="text-sm text-slate-500 truncate">@Model.Email</p>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full border
+                                 @(Model.Role == "Administrator"
+                                     ? "text-brand-400 bg-brand-400/10 border-brand-400/20"
+                                     : "text-slate-400 bg-slate-400/10 border-slate-400/20")">
+                        @Model.Role
+                    </span>
+                    <span class="text-xs text-slate-600">
+                        Member since @Model.CreatedAt.ToString("MMM yyyy")
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Stats Row ────────────────────────────────────────── -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        @{
+            var stats = new[]
+            {
+        new { Label = "Meetings", Value = Model.TotalMeetings.ToString(), Icon = "video",        Sub = Model.LastMeetingAt.HasValue ? $"Last: {Model.LastMeetingAt.Value:MMM dd}" : "None yet" },
+        new { Label = "Tasks",    Value = Model.TotalTasks.ToString(),    Icon = "check-square", Sub = $"{Model.PendingTasks} pending" },
+        new { Label = "Notes",    Value = Model.TotalNotes.ToString(),    Icon = "notebook-pen", Sub = "total notes" },
+        new { Label = "Feedback", Value = Model.TotalFeedback.ToString(), Icon = "flag",         Sub = "submitted" },
+        };
+        }
+        @foreach (var stat in stats)
+        {
+            <div class="bg-surface-card border border-surface-border rounded-xl p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <i data-lucide="@stat.Icon" class="w-4 h-4 text-slate-500"></i>
+                    <span class="text-xs text-slate-500 font-medium">@stat.Label</span>
+                </div>
+                <p class="text-2xl font-semibold text-white">@stat.Value</p>
+                <p class="text-xs text-slate-600 mt-0.5">@stat.Sub</p>
+            </div>
+        }
+    </div>
+
+    <!-- ── Success Banner ───────────────────────────────────── -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+            <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+            @TempData["Success"]
+        </div>
+    }
+
+    <!-- ── Tabs ─────────────────────────────────────────────── -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+
+        <!-- Tab Nav -->
+        <div class="flex border-b border-surface-border">
+            <button type="button" data-tab="profile"
+                    class="tab-btn flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors
+                           @(activeTab == "profile" ? "text-white border-b-2 border-brand-500" : "text-slate-500 hover:text-slate-300")">
+                <i data-lucide="user" class="w-4 h-4"></i>
+                Edit Profile
+            </button>
+            <button type="button" data-tab="password"
+                    class="tab-btn flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors
+                           @(activeTab == "password" ? "text-white border-b-2 border-brand-500" : "text-slate-500 hover:text-slate-300")">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                Change Password
+            </button>
+        </div>
+
+        <!-- ── Tab: Edit Profile ────────────────────────────── -->
+        <div id="tab-profile" class="tab-panel @(activeTab == "profile" ? "" : "hidden") p-6">
+            <form asp-action="UpdateProfile" asp-controller="Profile"
+                  method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <!-- Avatar Upload -->
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                        Profile Photo
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <div class="relative shrink-0" id="avatarPreviewWrap">
+                            @if (!string.IsNullOrEmpty(updateModel?.CurrentAvatarUrl))
+                            {
+                                <img src="@updateModel.CurrentAvatarUrl"
+                                     class="w-14 h-14 rounded-full object-cover ring-2 ring-surface-border" />
+                            }
+                            else
+                            {
+                                <div class="w-14 h-14 rounded-full bg-brand-900 border-2 border-brand-700
+                                            flex items-center justify-center text-brand-300 text-xl font-semibold">
+                                    @Model.FullName.Substring(0, 1).ToUpper()
+                                </div>
+                            }
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label for="AvatarFile"
+                                   class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl
+                                          border border-surface-border hover:border-brand-600 text-slate-400
+                                          hover:text-white text-xs font-medium transition-colors">
+                                <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                Upload Photo
+                            </label>
+                            <input type="file" id="AvatarFile" name="AvatarFile"
+                                   accept=".jpg,.jpeg,.png,.webp" class="sr-only" />
+                            @if (!string.IsNullOrEmpty(updateModel?.CurrentAvatarUrl))
+                            {
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" name="RemoveAvatar" value="true"
+                                           class="rounded border-surface-border bg-surface text-brand-600 focus:ring-brand-600" />
+                                    <span class="text-xs text-slate-500">Remove current photo</span>
+                                </label>
+                            }
+                            <p class="text-xs text-slate-600">JPG, PNG or WebP · Max 2 MB</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Name -->
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Full Name
+                    </label>
+                    <input type="text" name="FullName" value="@updateModel?.FullName"
+                           placeholder="Your full name"
+                           class="w-full bg-surface border border-surface-border rounded-xl px-4 py-3 text-sm text-slate-300
+                                  placeholder-slate-600 focus:outline-none focus:border-brand-600 focus:ring-1
+                                  focus:ring-brand-600/30 transition-colors" />
+                    <span class="text-xs text-red-400 mt-1 block">@Html.ValidationMessage("FullName")</span>
+                </div>
+
+                <!-- Email (read-only) -->
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Email Address
+                    </label>
+                    <div class="flex items-center gap-3 px-4 py-3 bg-surface rounded-xl border border-surface-border">
+                        <i data-lucide="mail" class="w-4 h-4 text-slate-600 shrink-0"></i>
+                        <span class="text-sm text-slate-500">@Model.Email</span>
+                        <span class="ml-auto text-xs text-slate-600 bg-surface-border px-2 py-0.5 rounded-md">
+                            Read-only
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Save -->
+                <div class="flex justify-end pt-4 border-t border-surface-border">
+                    <button type="submit"
+                            class="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500
+                                   text-white text-sm font-semibold rounded-xl transition-colors shadow-glow">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ── Tab: Change Password ──────────────────────────── -->
+        <div id="tab-password" class="tab-panel @(activeTab == "password" ? "" : "hidden") p-6">
+            <form asp-action="ChangePassword" asp-controller="Profile" method="post">
+                @Html.AntiForgeryToken()
+
+                @if (!ViewData.ModelState.IsValid && activeTab == "password")
+                {
+                    <div class="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                        <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 shrink-0"></i>
+                        <div>
+                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                            {
+                                <p>@error.ErrorMessage</p>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- ✅ Fields مفصولين عشان نقدر نضيف id لكل واحد -->
+                <!-- Current Password -->
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Current Password
+                    </label>
+                    <div class="relative">
+                        <input type="password"
+                               id="pwd-current"
+                               name="CurrentPassword"
+                               placeholder="Enter your current password"
+                               class="w-full bg-surface border border-surface-border rounded-xl px-4 py-3 pr-11
+                                      text-sm text-slate-300 placeholder-slate-600 focus:outline-none
+                                      focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 transition-colors" />
+                        <button type="button" onclick="togglePassword(this)"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 transition-colors">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <span class="text-xs text-red-400 mt-1 block">@Html.ValidationMessage("CurrentPassword")</span>
+                </div>
+
+                <!-- New Password -->
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        New Password
+                    </label>
+                    <div class="relative">
+                        <input type="password"
+                               id="pwd-new"
+                               name="NewPassword"
+                               placeholder="At least 8 chars, 1 uppercase, 1 number"
+                               class="w-full bg-surface border border-surface-border rounded-xl px-4 py-3 pr-11
+                                      text-sm text-slate-300 placeholder-slate-600 focus:outline-none
+                                      focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 transition-colors" />
+                        <button type="button" onclick="togglePassword(this)"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 transition-colors">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <span class="text-xs text-red-400 mt-1 block">@Html.ValidationMessage("NewPassword")</span>
+                </div>
+
+                <!-- Confirm New Password -->
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Confirm New Password
+                    </label>
+                    <div class="relative">
+                        <input type="password"
+                               id="pwd-confirm"
+                               name="ConfirmNewPassword"
+                               placeholder="Repeat your new password"
+                               class="w-full bg-surface border border-surface-border rounded-xl px-4 py-3 pr-11
+                                      text-sm text-slate-300 placeholder-slate-600 focus:outline-none
+                                      focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 transition-colors" />
+                        <button type="button" onclick="togglePassword(this)"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 transition-colors">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <span class="text-xs text-red-400 mt-1 block">@Html.ValidationMessage("ConfirmNewPassword")</span>
+                </div>
+
+                <!-- Save -->
+                <div class="flex justify-end pt-4 border-t border-surface-border">
+                    <button type="submit"
+                            id="pwd-submit"
+                            disabled
+                            class="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500
+                                   text-white text-sm font-semibold rounded-xl transition-colors
+                                   opacity-50 cursor-not-allowed">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // ── Tab switching ──────────────────────────────────────
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.tab;
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+                document.getElementById(`tab-${target}`).classList.remove('hidden');
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('text-white', 'border-b-2', 'border-brand-500');
+                    b.classList.add('text-slate-500');
+                });
+                btn.classList.remove('text-slate-500');
+                btn.classList.add('text-white', 'border-b-2', 'border-brand-500');
+            });
+        });
+
+        // ── Avatar preview ─────────────────────────────────────
+        document.getElementById('AvatarFile')?.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('avatarPreviewWrap').innerHTML =
+                    `<img src="${e.target.result}" class="w-14 h-14 rounded-full object-cover ring-2 ring-brand-600" />`;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ── Password toggle ────────────────────────────────────
+        function togglePassword(btn) {
+            const input = btn.previousElementSibling;
+            const hidden = input.type === 'password';
+            input.type = hidden ? 'text' : 'password';
+            btn.innerHTML = hidden
+                ? '<i data-lucide="eye-off" class="w-4 h-4"></i>'
+                : '<i data-lucide="eye" class="w-4 h-4"></i>';
+            lucide.createIcons();
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  PASSWORD CLIENT-SIDE VALIDATION
+        // ══════════════════════════════════════════════════════
+        const currentInput = document.getElementById('pwd-current');
+        const newInput = document.getElementById('pwd-new');
+        const confirmInput = document.getElementById('pwd-confirm');
+        const submitBtn = document.getElementById('pwd-submit');
+
+        // ── Rules ──────────────────────────────────────────────
+        const rules = [
+            { id: 'rule-length', label: '8+ characters', test: v => v.length >= 8 },
+            { id: 'rule-upper', label: 'Uppercase letter (A–Z)', test: v => /[A-Z]/.test(v) },
+            { id: 'rule-number', label: 'Number (0–9)', test: v => /[0-9]/.test(v) },
+            { id: 'rule-special', label: 'Special character (!@@#…)', test: v => /[^A-Za-z0-9]/.test(v) },
+        ];
+
+        const strengthConfig = [
+            { label: 'Too weak', labelColor: 'text-red-400', barColor: 'bg-red-500' },
+            { label: 'Weak', labelColor: 'text-orange-400', barColor: 'bg-orange-500' },
+            { label: 'Good', labelColor: 'text-amber-400', barColor: 'bg-amber-400' },
+            { label: 'Strong', labelColor: 'text-emerald-400', barColor: 'bg-emerald-500' },
+        ];
+
+        // ── Inject strength UI after new-password wrapper ──────
+        newInput.closest('.relative').insertAdjacentHTML('afterend', `
+                    <div class="mt-2 space-y-2" id="strength-ui">
+                        <div class="flex gap-1" id="strength-bar">
+                            ${[0, 1, 2, 3].map(i =>
+            `<div class="h-1 flex-1 rounded-full bg-surface-border transition-all duration-300" data-bar="${i}"></div>`
+        ).join('')}
+                        </div>
+                        <p class="text-xs font-medium transition-colors h-4" id="strength-label"></p>
+                        <ul class="mt-2 space-y-1.5">
+                            ${rules.map(r => `
+                                <li id="${r.id}" class="flex items-center gap-2 text-xs text-slate-600 transition-colors duration-200">
+                                    <svg viewBox="0 0 16 16" fill="none" class="w-3.5 h-3.5 shrink-0">
+                                        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" class="rule-circle"/>
+                                        <path class="rule-check hidden" d="M5 8l2 2 4-4" stroke="currentColor"
+                                              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>${r.label}</span>
+                                </li>`
+        ).join('')}
+                        </ul>
+                    </div>
+                `);
+
+        // ── Inject hint under confirm ──────────────────────────
+        confirmInput.closest('.relative').insertAdjacentHTML('afterend',
+            `<p id="confirm-hint" class="text-xs mt-1 h-4"></p>`
+        );
+
+        // ── Inject hint under current ──────────────────────────
+        currentInput.closest('.relative').insertAdjacentHTML('afterend',
+            `<p id="current-hint" class="text-xs mt-1 h-4 text-slate-600">Enter your current password to confirm changes.</p>`
+        );
+
+        const bars = document.querySelectorAll('[data-bar]');
+        const strengthLabel = document.getElementById('strength-label');
+        const confirmHint = document.getElementById('confirm-hint');
+        const currentHint = document.getElementById('current-hint');
+
+        // ── Shared input class builder ─────────────────────────
+        const BASE = 'w-full bg-surface border rounded-xl px-4 py-3 pr-11 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1 transition-colors';
+        const STATE = {
+            neutral: 'border-surface-border focus:border-brand-600   focus:ring-brand-600/30',
+            valid: 'border-emerald-500/50  focus:border-emerald-500 focus:ring-emerald-500/20',
+            invalid: 'border-red-500/50      focus:border-red-500     focus:ring-red-500/20',
+        };
+        const setInputState = (el, state) => el.className = `${BASE} ${STATE[state]}`;
+
+        // ── Evaluate new password ──────────────────────────────
+        function evaluateNew() {
+            const val = newInput.value;
+            const score = rules.filter(r => r.test(val)).length;
+
+            // Update each rule row
+            rules.forEach(r => {
+                const li = document.getElementById(r.id);
+                const check = li.querySelector('.rule-check');
+                const circle = li.querySelector('.rule-circle');
+                const passed = r.test(val);
+
+                li.className = 'flex items-center gap-2 text-xs transition-colors duration-200 ';
+                if (val.length === 0) {
+                    li.className += 'text-slate-600';
+                    check.classList.add('hidden');
+                    circle.classList.remove('hidden');
+                } else if (passed) {
+                    li.className += 'text-emerald-400';
+                    check.classList.remove('hidden');
+                    circle.classList.add('hidden');
+                } else {
+                    li.className += 'text-red-400';
+                    check.classList.add('hidden');
+                    circle.classList.remove('hidden');
+                }
+            });
+
+            // Strength bar
+            bars.forEach((bar, i) => {
+                bar.className = 'h-1 flex-1 rounded-full transition-all duration-300 ';
+                bar.className += (val.length > 0 && i < score)
+                    ? strengthConfig[Math.min(score - 1, 3)].barColor
+                    : 'bg-surface-border';
+            });
+
+            // Strength label
+            if (val.length === 0) {
+                strengthLabel.textContent = '';
+            } else {
+                const cfg = strengthConfig[Math.min(score - 1, 3)];
+                strengthLabel.className = `text-xs font-medium transition-colors h-4 ${cfg.labelColor}`;
+                strengthLabel.textContent = cfg.label;
+            }
+
+            // Input border
+            if (val.length === 0) setInputState(newInput, 'neutral');
+            else if (score >= 3) setInputState(newInput, 'valid');
+            else setInputState(newInput, 'invalid');
+
+            if (confirmInput.value.length > 0) evaluateConfirm();
+            updateSubmit();
+        }
+
+        // ── Evaluate confirm password ──────────────────────────
+        function evaluateConfirm() {
+            const empty = confirmInput.value.length === 0;
+            const match = confirmInput.value === newInput.value;
+
+            if (empty) {
+                setInputState(confirmInput, 'neutral');
+                confirmHint.textContent = '';
+                confirmHint.className = 'text-xs mt-1 h-4';
+            } else if (match) {
+                setInputState(confirmInput, 'valid');
+                confirmHint.textContent = '✓ Passwords match';
+                confirmHint.className = 'text-xs mt-1 h-4 text-emerald-400';
+            } else {
+                setInputState(confirmInput, 'invalid');
+                confirmHint.textContent = '✗ Passwords do not match';
+                confirmHint.className = 'text-xs mt-1 h-4 text-red-400';
+            }
+
+            updateSubmit();
+        }
+
+        // ── Evaluate current password ──────────────────────────
+        function evaluateCurrent() {
+            const empty = currentInput.value.length === 0;
+
+            if (empty) {
+                setInputState(currentInput, 'neutral');
+                currentHint.textContent = 'Enter your current password to confirm changes.';
+                currentHint.className = 'text-xs mt-1 h-4 text-slate-600';
+            } else {
+                setInputState(currentInput, 'valid');
+                currentHint.textContent = '✓ Looks good';
+                currentHint.className = 'text-xs mt-1 h-4 text-emerald-400';
+            }
+
+            updateSubmit();
+        }
+
+        // ── Enable submit only when all conditions pass ────────
+        function updateSubmit() {
+            const score = rules.filter(r => r.test(newInput.value)).length;
+            const allGood =
+                currentInput.value.length > 0 &&
+                score === 4 &&   
+                confirmInput.value === newInput.value &&
+                newInput.value !== currentInput.value;
+
+            submitBtn.disabled = !allGood;
+            submitBtn.classList.toggle('opacity-50', !allGood);
+            submitBtn.classList.toggle('cursor-not-allowed', !allGood);
+            submitBtn.classList.toggle('hover:bg-brand-500', allGood);
+            submitBtn.classList.toggle('shadow-glow', allGood);
+        }
+
+        // ── Wire events ────────────────────────────────────────
+        currentInput.addEventListener('input', evaluateCurrent);
+        newInput.addEventListener('input', evaluateNew);
+        confirmInput.addEventListener('input', evaluateConfirm);
+
+        // Init
+        updateSubmit();
+    </script>
+}

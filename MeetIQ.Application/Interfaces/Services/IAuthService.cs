@@ -16,5 +16,9 @@ namespace MeetIQ.Application.Interfaces.Services
         Task<IList<string>> GetUserRolesAsync(ApplicationUser user);
         Task RemoveFromRolesAsync(ApplicationUser user, IEnumerable<string> roles);
         Task AddToRoleAsync(ApplicationUser user, string role);
+
+        Task<(bool Succeeded, IEnumerable<string> Errors)> ChangePasswordAsync( string userId,
+                                                                                string currentPassword,
+                                                                                string newPassword);
     }
 }
