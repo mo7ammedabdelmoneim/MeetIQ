@@ -1,226 +1,568 @@
-﻿@model IEnumerable<Meeting>
+﻿@model PagedResult<MeetingListItemDto>
+
 @{
     ViewData["Title"] = "Meetings";
 
+    var currentStatus = ViewBag.CurrentStatus as MeetingStatus?;
+    var currentSearch = ViewBag.CurrentSearch as string;
+    var currentFrom = ViewBag.CurrentFrom as string;
+    var currentTo = ViewBag.CurrentTo as string;
+    var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     var now = DateTime.UtcNow;
-    var live = Model.Where(m => m.Status == MeetingStatus.InProgress).ToList();
-    var missed = Model.Where(m => m.Status == MeetingStatus.Scheduled && m.ScheduledAt < now).OrderByDescending(m => m.ScheduledAt).ToList();
-    var upcoming = Model.Where(m => m.Status == MeetingStatus.Scheduled && m.ScheduledAt >= now).OrderBy(m => m.ScheduledAt).ToList();
-    var past = Model.Where(m => m.Status == MeetingStatus.Ended || m.Status == MeetingStatus.Cancelled).OrderByDescending(m => m.ScheduledAt).ToList();
+
+    var live = Model.Items.Where(m => m.Status == MeetingStatus.InProgress).ToList();
+    var missed = Model.Items.Where(m => m.Status == MeetingStatus.Scheduled && m.ScheduledAt < now)
+                             .OrderByDescending(m => m.ScheduledAt).ToList();
+    var upcoming = Model.Items.Where(m => m.Status == MeetingStatus.Scheduled && m.ScheduledAt >= now)
+                              .OrderBy(m => m.ScheduledAt).ToList();
+    var past = Model.Items.Where(m => m.Status == MeetingStatus.Ended || m.Status == MeetingStatus.Cancelled)
+                          .OrderByDescending(m => m.ScheduledAt).ToList();
+
+    bool hasFilters = currentStatus.HasValue
+                   || !string.IsNullOrEmpty(currentSearch)
+                   || !string.IsNullOrEmpty(currentFrom);
 }
 
-<div class="space-y-6">
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
 
-    <!-- Header -->
-    <div class="flex items-center justify-between">
+    .meetings-root * {
+        font-family: 'DM Sans', system-ui, sans-serif;
+    }
+
+    @@keyframes breathe {
+        0%, 100% {
+            opacity: .9;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: .4;
+            transform: scale(1.7);
+        }
+    }
+
+    .live-dot::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: #4ade80;
+        animation: breathe 2s ease-in-out infinite;
+    }
+
+    .meeting-row {
+        transition: background .12s ease;
+        border-radius: 12px;
+    }
+
+        .meeting-row:hover {
+            background: rgba(255,255,255,.03);
+        }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 3px 10px;
+        border-radius: 100px;
+        letter-spacing: .01em;
+    }
+
+    .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: #4b5563;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255,255,255,.05);
+        margin-bottom: 4px;
+    }
+
+    .filter-input {
+        background: transparent;
+        border: none;
+        outline: none;
+        font-size: 13.5px;
+        color: #d1d5db;
+        width: 100%;
+    }
+
+        .filter-input::placeholder {
+            color: #374151;
+        }
+
+    input[type="date"].filter-input::-webkit-calendar-picker-indicator {
+        filter: invert(.3);
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #2563eb;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 9px;
+        border: none;
+        cursor: pointer;
+        transition: background .12s;
+        text-decoration: none;
+    }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            color: #fff;
+        }
+
+    .btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: transparent;
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 9px;
+        border: 1px solid rgba(255,255,255,.08);
+        cursor: pointer;
+        transition: color .12s, border-color .12s;
+        text-decoration: none;
+    }
+
+        .btn-ghost:hover {
+            color: #e5e7eb;
+            border-color: rgba(255,255,255,.18);
+        }
+
+    .btn-sm {
+        padding: 5px 13px;
+        font-size: 12px;
+        border-radius: 7px;
+    }
+
+    .btn-success {
+        background: #059669;
+    }
+
+        .btn-success:hover {
+            background: #047857;
+        }
+
+    .btn-warn {
+        background: transparent;
+        color: #f59e0b;
+        border: 1px solid rgba(245,158,11,.25);
+    }
+
+        .btn-warn:hover {
+            background: rgba(245,158,11,.06);
+            color: #f59e0b;
+        }
+
+    .icon-box {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border: 1px solid rgba(255,255,255,.06);
+    }
+</style>
+
+<div class="meetings-root space-y-6">
+
+    <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
-            <h2 class="text-white font-semibold text-lg">Meetings</h2>
-            <p class="text-slate-500 text-sm mt-0.5">All your scheduled and past video calls</p>
+            <h2 style="font-size:18px;font-weight:500;color:#f3f4f6;margin:0;">Meetings</h2>
+            <p style="font-size:13px;color:#6b7280;margin:3px 0 0;">All your scheduled and past video calls</p>
         </div>
-        <a asp-action="Create"
-           class="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-glow">
-            <i data-lucide="video" class="w-4 h-4"></i>
-            New Meeting
-        </a>
+
+        <div class="flex items-center gap-2 flex-wrap">
+            @if (live.Any())
+            {
+                <span class="pill" style="background:rgba(74,222,128,.07);color:#4ade80;border:1px solid rgba(74,222,128,.18);">
+                    <span class="relative flex" style="width:7px;height:7px;">
+                        <span class="live-dot relative rounded-full" style="width:7px;height:7px;background:#4ade80;"></span>
+                    </span>
+                    @live.Count Live
+                </span>
+            }
+            @if (missed.Any())
+            {
+                <span class="pill" style="background:rgba(251,191,36,.06);color:#fbbf24;border:1px solid rgba(251,191,36,.18);">
+                    <i data-lucide="clock" style="width:11px;height:11px;"></i>
+                    @missed.Count Missed
+                </span>
+            }
+
+            <a asp-action="Create" class="btn-primary">
+                <i data-lucide="video" style="width:14px;height:14px;"></i>
+                New Meeting
+            </a>
+        </div>
     </div>
 
-    @if (!Model.Any())
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;">
+        <form method="get" class="flex flex-wrap items-center gap-2.5">
+
+            <div class="flex items-center gap-2.5 flex-1 min-w-52"
+                 style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:8px 12px;">
+                <i data-lucide="search" style="width:13px;height:13px;color:#4b5563;flex-shrink:0;"></i>
+                <input type="text" name="search" value="@currentSearch" placeholder="Search meetings…"
+                       class="filter-input" />
+            </div>
+
+            <div style="position:relative;">
+                <i data-lucide="layers" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#4b5563;pointer-events:none;"></i>
+                <select name="status"
+                        style="appearance:none;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+                               border-radius:9px;padding:8px 30px 8px 32px;font-size:13px;color:#d1d5db;cursor:pointer;outline:none;">
+                    <option value="">All statuses</option>
+                    @foreach (MeetingStatus s in Enum.GetValues(typeof(MeetingStatus)))
+                    {
+                        <option value="@((int)s)" selected="@(currentStatus == s)">
+                            @(s == MeetingStatus.InProgress ? "Live" : s.ToString())
+                        </option>
+                    }
+                </select>
+                <i data-lucide="chevron-down" style="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#4b5563;pointer-events:none;"></i>
+            </div>
+
+            <div class="flex items-center gap-2"
+                 style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:8px 12px;">
+                <i data-lucide="calendar" style="width:13px;height:13px;color:#4b5563;flex-shrink:0;"></i>
+                <input type="date" name="from" value="@currentFrom" class="filter-input" style="width:120px;" />
+                <span style="color:#374151;font-size:12px;">–</span>
+                <input type="date" name="to" value="@currentTo" class="filter-input" style="width:120px;" />
+            </div>
+
+            <div class="flex items-center gap-2 ml-auto">
+                @if (hasFilters)
+                {
+                    <a href="@Url.Action("Index")" class="btn-ghost btn-sm">
+                        <i data-lucide="x" style="width:12px;height:12px;"></i>
+                        Clear
+                    </a>
+                }
+                <button type="submit" class="btn-primary btn-sm">
+                    <i data-lucide="search" style="width:12px;height:12px;"></i>
+                    Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (!Model.Items.Any())
     {
         <div class="flex flex-col items-center justify-center py-20 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-brand-900/30 border border-brand-800/40 flex items-center justify-center mb-4">
-                <i data-lucide="video-off" class="w-8 h-8 text-brand-600"></i>
+            <div style="width:52px;height:52px;border-radius:14px;background:rgba(37,99,235,.08);
+                         border:1px solid rgba(37,99,235,.14);display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                <i data-lucide="video-off" style="width:22px;height:22px;color:#3b82f6;"></i>
             </div>
-            <p class="text-white font-medium mb-1">No meetings yet</p>
-            <p class="text-slate-500 text-sm mb-6">Schedule your first video call to get started</p>
-            <a asp-action="Create" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-xl transition-colors">
-                Schedule Meeting
-            </a>
+            <p style="font-size:14px;font-weight:500;color:#e5e7eb;margin:0 0 6px;">
+                @(hasFilters ? "No meetings found" : "No meetings yet")
+            </p>
+            <p style="font-size:13px;color:#6b7280;margin:0 0 20px;">
+                @(hasFilters ? "Try adjusting your filters." : "Schedule your first video call to get started.")
+            </p>
+            <a asp-action="Create" class="btn-primary btn-sm">Schedule Meeting</a>
         </div>
     }
     else
     {
-        <!-- ── Live Now ── -->
-        @if (live.Any())
+        @* @if (live.Any()) *@
         {
             <section>
-                <p class="text-xs uppercase tracking-widest text-slate-600 font-semibold mb-3">Live Now</p>
-                <div class="space-y-2">
+                <p class="section-label">Live now</p>
+                <div class="space-y-0.5">
                     @foreach (var m in live)
                     {
-                        <div class="group flex items-center gap-4 bg-surface-card border border-red-500/30 hover:border-red-500/60 rounded-2xl px-5 py-4 transition-all cursor-pointer"
+                        var isHost = m.HostId == userId;
+                        <div class="meeting-row flex items-center gap-3 px-3 py-3 cursor-pointer"
                              onclick="location.href='@Url.Action("Details","Meetings", new { id = m.Id })'">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-red-500/10 border border-red-500/20">
-                                <i data-lucide="radio" class="w-5 h-5 text-red-400"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-white font-medium text-sm truncate">@m.Title</p>
-                                <p class="text-slate-500 text-xs mt-0.5">
-                                    @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
-                                    &nbsp;·&nbsp; Host: @(m.Host?.UserName ?? "Unknown")
-                                    &nbsp;·&nbsp; @m.Participants.Count participant@(m.Participants.Count != 1 ? "s" : "")
-                                </p>
-                            </div>
-                            <div class="flex items-center gap-3 shrink-0">
-                                <span class="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-full">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                                    Live
+
+                            <div class="icon-box" style="background:rgba(74,222,128,.07);border-color:rgba(74,222,128,.14);">
+                                <span class="relative flex" style="width:8px;height:8px;">
+                                    <span class="live-dot relative rounded-full" style="width:8px;height:8px;background:#4ade80;"></span>
                                 </span>
-                                <a href="@Url.Action("Join","Meetings", new { id = m.Id })"
-                                   onclick="event.stopPropagation()"
-                                   class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg transition-colors">
-                                    Join
-                                </a>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </section>
-        }
-
-        <!-- ── Missed (scheduled but time has passed) ── -->
-        @if (missed.Any())
-        {
-            <section>
-                <div class="flex items-center gap-2 mb-3">
-                    <p class="text-xs uppercase tracking-widest text-amber-600 font-semibold">Missed</p>
-                    <span class="text-[10px] font-semibold bg-amber-500/10 border border-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">@missed.Count</span>
-                </div>
-                <div class="space-y-2">
-                    @foreach (var m in missed)
-                    {
-                        var missedAgo = now - m.ScheduledAt;
-                        var agoText = missedAgo.TotalMinutes < 60
-                        ? $"{(int)missedAgo.TotalMinutes}m ago"
-                        : missedAgo.TotalHours < 24
-                        ? $"{(int)missedAgo.TotalHours}h ago"
-                        : $"{(int)missedAgo.TotalDays}d ago";
-
-                        <div class="group flex items-center gap-4 bg-surface-card border border-amber-500/20 hover:border-amber-500/40 rounded-2xl px-5 py-4 transition-all cursor-pointer"
-                             onclick="location.href='@Url.Action("Details","Meetings", new { id = m.Id })'">
-
-                            <!-- Missed icon -->
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-amber-500/10 border border-amber-500/20">
-                                <i data-lucide="clock-alert" class="w-5 h-5 text-amber-500"></i>
                             </div>
 
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2">
-                                    <p class="text-white font-medium text-sm truncate">@m.Title</p>
-                                </div>
-                                <p class="text-slate-500 text-xs mt-0.5">
-                                    Scheduled @m.ScheduledAt.ToLocalTime().ToString("MMM d · h:mm tt")
-                                    &nbsp;·&nbsp; Host: @(m.Host?.UserName ?? "Unknown")
-                                </p>
-                            </div>
-
-                            <div class="flex items-center gap-3 shrink-0">
-                                <!-- "X ago" indicator -->
-                                <span class="text-xs font-medium text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                                    <i data-lucide="clock" class="w-3 h-3"></i>
-                                    @agoText
-                                </span>
-                                <!-- Still allow joining — meeting room still exists -->
-                                <a href="@Url.Action("Join","Meetings", new { id = m.Id })"
-                                   onclick="event.stopPropagation()"
-                                   class="px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/30 text-amber-400 text-xs font-semibold rounded-lg transition-colors">
-                                    Start Late
-                                </a>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </section>
-        }
-
-        <!-- ── Upcoming ── -->
-        @if (upcoming.Any())
-        {
-            <section>
-                <p class="text-xs uppercase tracking-widest text-slate-600 font-semibold mb-3">Upcoming</p>
-                <div class="space-y-2">
-                    @foreach (var m in upcoming)
-                    {
-                        var timeUntil = m.ScheduledAt - now;
-                        var soonClass = timeUntil.TotalMinutes <= 15 ? "text-brand-400" : "text-slate-600";
-                        var soonText = timeUntil.TotalMinutes <= 60
-                        ? $"in {(int)timeUntil.TotalMinutes}m"
-                        : timeUntil.TotalHours < 24
-                        ? $"in {(int)timeUntil.TotalHours}h"
-                        : m.ScheduledAt.ToLocalTime().ToString("MMM d · h:mm tt");
-
-                        <div class="group flex items-center gap-4 bg-surface-card border border-surface-border hover:border-brand-800 rounded-2xl px-5 py-4 transition-all cursor-pointer"
-                             onclick="location.href='@Url.Action("Details","Meetings", new { id = m.Id })'">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-brand-900/30 border border-brand-800/30">
-                                <i data-lucide="video" class="w-5 h-5 text-brand-400"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-white font-medium text-sm truncate">@m.Title</p>
-                                <p class="text-slate-500 text-xs mt-0.5">
-                                    @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
-                                    &nbsp;·&nbsp; Host: @(m.Host?.UserName ?? "Unknown")
-                                    &nbsp;·&nbsp; @m.Participants.Count participant@(m.Participants.Count != 1 ? "s" : "")
-                                </p>
-                            </div>
-                            <div class="flex items-center gap-3 shrink-0">
-                                <span class="text-xs font-medium @soonClass">@soonText</span>
-                                <span class="text-xs font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2.5 py-1 rounded-full">
-                                    Scheduled
-                                </span>
-                                <a href="@Url.Action("Join","Meetings", new { id = m.Id })"
-                                   onclick="event.stopPropagation()"
-                                   class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg transition-colors">
-                                    Join
-                                </a>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </section>
-        }
-
-        <!-- ── Past ── -->
-        @if (past.Any())
-        {
-            <section>
-                <p class="text-xs uppercase tracking-widest text-slate-600 font-semibold mb-3">Past</p>
-                <div class="space-y-2">
-                    @foreach (var m in past)
-                    {
-                        TimeSpan? dur = m.StartedAt.HasValue && m.EndedAt.HasValue
-                        ? m.EndedAt.Value - m.StartedAt.Value
-                        : null;
-
-                        <div class="group flex items-center gap-4 bg-surface-card border border-surface-border hover:border-slate-600 rounded-2xl px-5 py-4 transition-all cursor-pointer opacity-75 hover:opacity-100"
-                             onclick="location.href='@Url.Action("Details","Meetings", new { id = m.Id })'">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-slate-800/50 border border-slate-700/30">
-                                <i data-lucide="video" class="w-5 h-5 text-slate-600"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-white font-medium text-sm truncate">@m.Title</p>
-                                <p class="text-slate-500 text-xs mt-0.5">
-                                    @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
-                                    &nbsp;·&nbsp; Host: @(m.Host?.UserName ?? "Unknown")
-                                    &nbsp;·&nbsp; @m.Participants.Count participant@(m.Participants.Count != 1 ? "s" : "")
-                                    @if (dur.HasValue)
+                            <div style="flex:1;min-width:0;">
+                                <div class="flex items-center gap-2 flex-wrap" style="margin-bottom:2px;">
+                                    <p style="font-size:13.5px;font-weight:500;color:#f3f4f6;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@m.Title</p>
+                                    @if (isHost)
                                     {
-                                        <span>&nbsp;·&nbsp; @((int)dur.Value.TotalMinutes)m</span>
+                                        <span class="pill" style="background:rgba(167,139,250,.08);color:#a78bfa;border:1px solid rgba(167,139,250,.18);font-size:10px;">Host</span>
+                                    }
+                                </div>
+                                <p style="font-size:12px;color:#6b7280;margin:0;">
+                                    @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
+                                    &nbsp;·&nbsp; @m.ParticipantsCount participant@(m.ParticipantsCount != 1 ? "s" : "")
+                                    @if (m.HasTranscript)
+                                    {
+                                        <span style="color:#059669;">&nbsp;· Transcript</span>
                                     }
                                 </p>
                             </div>
-                            <div class="flex items-center gap-3 shrink-0">
-                                <span class="text-xs font-medium text-slate-500 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-full">
-                                    Ended
-                                </span>
-                                <a href="@Url.Action("Details","Meetings", new { id = m.Id })"
-                                   onclick="event.stopPropagation()"
-                                   class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition-colors">
-                                    View
-                                </a>
+
+                            <div class="flex items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+                                <span class="pill" style="background:rgba(74,222,128,.07);color:#4ade80;border:1px solid rgba(74,222,128,.15);">Live</span>
+                                @if (isHost)
+                                {
+                                    <form asp-action="Start" method="post" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="meetingId" value="@m.Id" />
+                                        <button type="submit" class="btn-primary btn-success btn-sm">Rejoin</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <a href="@Url.Action("Room", new { id = m.Id })" class="btn-primary btn-sm">Join</a>
+                                }
                             </div>
                         </div>
                     }
                 </div>
             </section>
+        }
+
+        @if (missed.Any())
+        {
+            <section>
+                <div class="flex items-center gap-2" style="border-bottom:1px solid rgba(255,255,255,.05);padding-bottom:10px;margin-bottom:4px;">
+                    <p class="section-label" style="border:none;padding:0;margin:0;color:#b45309;">Missed</p>
+                    <span class="pill" style="background:rgba(251,191,36,.07);color:#f59e0b;border:1px solid rgba(251,191,36,.18);font-size:10px;">@missed.Count</span>
+                </div>
+                <div class="space-y-0.5">
+                    @foreach (var m in missed)
+                    {
+                        var isHost = m.HostId == userId;
+                        var diff = now - m.ScheduledAt;
+                        var ago = diff.TotalMinutes < 60 ? $"{(int)diff.TotalMinutes}m ago"
+                        : diff.TotalHours < 24 ? $"{(int)diff.TotalHours}h ago"
+                        : $"{(int)diff.TotalDays}d ago";
+
+                        <div class="meeting-row flex items-center gap-3 px-3 py-3 cursor-pointer"
+                             onclick="location.href='@Url.Action("Details","Meetings", new { id = m.Id })'">
+
+                            <div class="icon-box" style="background:rgba(251,191,36,.06);border-color:rgba(251,191,36,.14);">
+                                <i data-lucide="clock" style="width:15px;height:15px;color:#f59e0b;"></i>
+                            </div>
+
+                            <div style="flex:1;min-width:0;">
+                                <div class="flex items-center gap-2 flex-wrap" style="margin-bottom:2px;">
+                                    <p style="font-size:13.5px;font-weight:500;color:#f3f4f6;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@m.Title</p>
+                                    @if (isHost)
+                                    {
+                                        <span class="pill" style="background:rgba(167,139,250,.08);color:#a78bfa;border:1px solid rgba(167,139,250,.18);font-size:10px;">Host</span>
+                                    }
+                                </div>
+                                <p style="font-size:12px;color:#6b7280;margin:0;">
+                                    Scheduled @m.ScheduledAt.ToLocalTime().ToString("MMM d · h:mm tt")
+                                    &nbsp;·&nbsp; @m.ParticipantsCount participant@(m.ParticipantsCount != 1 ? "s" : "")
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+                                <span style="font-size:12px;font-weight:500;color:#9ca3af;">@ago</span>
+                                @if (isHost)
+                                {
+                                    <form asp-action="Start" method="post" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="meetingId" value="@m.Id" />
+                                        <button type="submit" class="btn-ghost btn-warn btn-sm">Start late</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (upcoming.Any())
+        {
+            <section>
+                <p class="section-label">Upcoming</p>
+                <div class="space-y-0.5">
+                    @foreach (var m in upcoming)
+                    {
+                        var isHost = m.HostId == userId;
+                        var diff = m.ScheduledAt - now;
+                        var soon = diff.TotalMinutes <= 15;
+                        var timeText = diff.TotalMinutes <= 60 ? $"in {(int)diff.TotalMinutes}m"
+                        : diff.TotalHours < 24 ? $"in {(int)diff.TotalHours}h"
+                        : m.ScheduledAt.ToLocalTime().ToString("MMM d · h:mm tt");
+
+                        <div class="meeting-row flex items-center gap-3 px-3 py-3 cursor-pointer"
+                             onclick="location.href='@Url.Action("Details","Meetings", new { id = m.Id })'">
+
+                            <div class="icon-box" style="background:rgba(37,99,235,.06);border-color:rgba(37,99,235,.12);">
+                                <i data-lucide="video" style="width:15px;height:15px;color:#3b82f6;"></i>
+                            </div>
+
+                            <div style="flex:1;min-width:0;">
+                                <div class="flex items-center gap-2 flex-wrap" style="margin-bottom:2px;">
+                                    <p style="font-size:13.5px;font-weight:500;color:#f3f4f6;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@m.Title</p>
+                                    @if (isHost)
+                                    {
+                                        <span class="pill" style="background:rgba(167,139,250,.08);color:#a78bfa;border:1px solid rgba(167,139,250,.18);font-size:10px;">Host</span>
+                                    }
+                                </div>
+                                <p style="font-size:12px;color:#6b7280;margin:0;">
+                                    @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
+                                    &nbsp;·&nbsp; @m.ParticipantsCount participant@(m.ParticipantsCount != 1 ? "s" : "")
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+                                <span style="font-size:12px;font-weight:500;color:@(soon ? "#60a5fa" : "#6b7280");">@timeText</span>
+                                @if (isHost)
+                                {
+                                    <form asp-action="Start" method="post" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="meetingId" value="@m.Id" />
+                                        <button type="submit" class="btn-primary btn-success btn-sm">Start</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="pill" style="background:rgba(37,99,235,.07);color:#60a5fa;border:1px solid rgba(37,99,235,.18);">Scheduled</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (past.Any())
+        {
+            <section>
+                <p class="section-label">Past</p>
+                <div class="space-y-0.5">
+                    @foreach (var m in past)
+                    {
+                        var isHost = m.HostId == userId;
+                        var isCancelled = m.Status == MeetingStatus.Cancelled;
+
+                        <div class="meeting-row flex items-center gap-3 px-3 py-3 cursor-pointer"
+                             style="opacity:.6;"
+                             onmouseenter="this.style.opacity='1'"
+                             onmouseleave="this.style.opacity='.6'"
+                             onclick="location.href='@Url.Action("Details","Meetings", new { id = m.Id })'">
+
+                            <div class="icon-box"
+                                 style="background:@(isCancelled ? "rgba(239,68,68,.06)" : "rgba(255,255,255,.03)");
+                                        border-color:@(isCancelled ? "rgba(239,68,68,.14)" : "rgba(255,255,255,.05)");">
+                                <i data-lucide="@(isCancelled ? "x-circle" : "video")"
+                                   style="width:15px;height:15px;color:@(isCancelled ? "#ef4444" : "#4b5563");"></i>
+                            </div>
+
+                            <div style="flex:1;min-width:0;">
+                                <div class="flex items-center gap-2 flex-wrap" style="margin-bottom:2px;">
+                                    <p style="font-size:13.5px;font-weight:400;color:#9ca3af;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@m.Title</p>
+                                    @if (isHost)
+                                    {
+                                        <span class="pill" style="background:rgba(167,139,250,.05);color:#7c3aed;border:1px solid rgba(167,139,250,.12);font-size:10px;opacity:.7;">Host</span>
+                                    }
+                                </div>
+                                <p style="font-size:12px;color:#4b5563;margin:0;">
+                                    @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
+                                    &nbsp;·&nbsp; @m.ParticipantsCount participant@(m.ParticipantsCount != 1 ? "s" : "")
+                                    @if (m.HasTranscript)
+                                    {
+                                        <span style="color:#059669;opacity:.7;">&nbsp;· Transcript</span>
+                                    }
+                                    @if (m.HasSummary)
+                                    {
+                                        <span style="color:#7c3aed;opacity:.7;">&nbsp;· Summary</span>
+                                    }
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+                                <span class="pill"
+                                      style="@(isCancelled
+                                          ? "background:rgba(239,68,68,.07);color:#f87171;border:1px solid rgba(239,68,68,.18);"
+                                          : "background:rgba(255,255,255,.04);color:#6b7280;border:1px solid rgba(255,255,255,.07);")">
+                                    @(isCancelled ? "Cancelled" : "Ended")
+                                </span>
+                                <a href="@Url.Action("Details","Meetings", new { id = m.Id })"
+                                   class="btn-ghost btn-sm">View</a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="flex items-center justify-between pt-2" style="border-top:1px solid rgba(255,255,255,.05);">
+                <span style="font-size:12px;color:#4b5563;">Page @Model.Page of @Model.TotalPages</span>
+                <div class="flex items-center gap-1">
+                    @if (Model.Page > 1)
+                    {
+                        <a href="?page=@(Model.Page-1)&search=@currentSearch&status=@((int?)currentStatus)&from=@currentFrom&to=@currentTo"
+                           class="btn-ghost btn-sm">
+                            <i data-lucide="chevron-left" style="width:13px;height:13px;"></i>
+                        </a>
+                    }
+                    @{
+                        var pStart = Math.Max(1, Model.Page - 2);
+                        var pEnd = Math.Min(Model.TotalPages, Model.Page + 2);
+                    }
+                    @if (pStart > 1)
+                    {
+                        <a href="?page=1&search=@currentSearch&status=@((int?)currentStatus)"
+                           class="btn-ghost btn-sm" style="width:32px;justify-content:center;">1</a>
+                        @if (pStart > 2)
+                        {
+                            <span style="color:#374151;font-size:13px;padding:0 2px;">…</span>
+                        }
+                    }
+                    @for (int i = pStart; i <= pEnd; i++)
+                    {
+                        if (i == Model.Page)
+                        {
+                            <span style="width:32px;height:32px;border-radius:8px;background:#2563eb;color:#fff;
+                                          font-size:13px;display:flex;align-items:center;justify-content:center;">@i</span>
+                        }
+                        else
+                        {
+                            <a href="?page=@i&search=@currentSearch&status=@((int?)currentStatus)&from=@currentFrom&to=@currentTo"
+                               class="btn-ghost btn-sm" style="width:32px;justify-content:center;">@i</a>
+                        }
+                    }
+                    @if (pEnd < Model.TotalPages)
+                    {
+                        @if (pEnd < Model.TotalPages - 1)
+                        {
+                            <span style="color:#374151;font-size:13px;padding:0 2px;">…</span>
+                        }
+                        <a href="?page=@Model.TotalPages&search=@currentSearch&status=@((int?)currentStatus)"
+                           class="btn-ghost btn-sm" style="width:32px;justify-content:center;">@Model.TotalPages</a>
+                    }
+                    @if (Model.Page < Model.TotalPages)
+                    {
+                        <a href="?page=@(Model.Page+1)&search=@currentSearch&status=@((int?)currentStatus)&from=@currentFrom&to=@currentTo"
+                           class="btn-ghost btn-sm">
+                            <i data-lucide="chevron-right" style="width:13px;height:13px;"></i>
+                        </a>
+                    }
+                </div>
+            </div>
         }
     }
 </div>

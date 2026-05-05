@@ -1,274 +1,231 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MeetIQ.Domain.Entities;
+using MeetIQ.Application.Features.Meetings.Commands.CancelMeetingCommand;
+using MeetIQ.Application.Features.Meetings.Commands.CreateMeetingCommand;
+using MeetIQ.Application.Features.Meetings.Commands.EndMeetingCommand;
+using MeetIQ.Application.Features.Meetings.Commands.JoinMeetingCommand;
+using MeetIQ.Application.Features.Meetings.Commands.LeaveMeetingCommand;
+using MeetIQ.Application.Features.Meetings.Commands.StartMeetingCommand;
+using MeetIQ.Application.Features.Meetings.Queries.GetMeetingByIdQuery;
+using MeetIQ.Application.Features.Meetings.Queries.GetMeetingsQuery;
+using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Domain.Enums;
-using System.Security.Claims;
-using MeetIQ.Infrastructure.Services;
-using MeetIQ.Web.ViewModels;
-using MeetIQ.Infrastructure.Presistence;
-using MeetIQ.Web.ViewModels.Mettings;
-using MeetIQ.Web.ViewModels.Calendar;
+using MeetIQ.Web.ViewModels.Meetings;
 
 namespace MeetIQ.Web.Controllers
 {
     [Authorize]
     public class MeetingsController : Controller
     {
-        private readonly ApplicationDbContext _db;
-        private readonly JitsiTokenService _jitsiTokenService;
-        private readonly IConfiguration _config;
+        private readonly IMediator mediator;
+        private readonly IJitsiTokenService jitsiTokenService;
 
-        public MeetingsController(
-            ApplicationDbContext db,
-            JitsiTokenService jitsiTokenService,
-            IConfiguration config)
+        public MeetingsController(IMediator mediator, IJitsiTokenService jitsiTokenService)
         {
-            _db = db;
-            _jitsiTokenService = jitsiTokenService;
-            _config = config;
+            this.mediator = mediator;
+            this.jitsiTokenService = jitsiTokenService;
         }
 
-        private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        private string CurrentUserName => User.Identity?.Name ?? "User";
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
+        private string CurrentUserName => User.FindFirst("FullName")?.Value ?? "User";
+        private string CurrentUserEmail => User.FindFirst(ClaimTypes.Email)?.Value ?? "";
 
-        // INDEX 
-        public async Task<IActionResult> Index()
+        
+        [HttpGet]
+        public async Task<IActionResult> Index(
+            MeetingStatus? status,
+            string? search,
+            DateTime? from,
+            DateTime? to,
+            int page = 1)
         {
-            var meetings = await _db.Meetings
-                .Include(m => m.Host)
-                .Include(m => m.Participants).ThenInclude(p => p.User)
-                .Where(m => m.HostId == CurrentUserId
-                         || m.Participants.Any(p => p.UserId == CurrentUserId))
-                .OrderByDescending(m => m.ScheduledAt)
-                .ToListAsync();
+            ViewData["Title"] = "Meetings";
 
-            return View(meetings);
+            var result = await mediator.Send(new GetMeetingsQuery
+            {
+                UserId = CurrentUserId,
+                Status = status,
+                Search = search,
+                From = from,
+                To = to,
+                Page = page
+            });
+
+            ViewBag.CurrentStatus = status;
+            ViewBag.CurrentSearch = search;
+            ViewBag.CurrentFrom = from?.ToString("yyyy-MM-dd");
+            ViewBag.CurrentTo = to?.ToString("yyyy-MM-dd");
+
+            return View(result);
         }
 
-        // DETAILS 
+
+        [HttpGet]
+        public IActionResult Create()
+        {
+            ViewData["Title"] = "New Meeting";
+            return View(new CreateMeetingViewModel());
+        }
+
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(CreateMeetingViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewData["Title"] = "New Meeting";
+                return View(model);
+            }
+
+            var id = await mediator.Send(new CreateMeetingCommand
+            {
+                Title = model.Title,
+                ScheduledAt = model.ScheduledAt.ToUniversalTime(),
+                HostId = CurrentUserId
+            });
+
+            TempData["Success"] = "Meeting created successfully.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+
+        [HttpGet]
         public async Task<IActionResult> Details(Guid id)
         {
-            var meeting = await _db.Meetings
-                .Include(m => m.Host)
-                .Include(m => m.Participants).ThenInclude(p => p.User)
-                .Include(m => m.Notes)
-                .Include(m => m.Tasks)
-                .Include(m => m.Summary)
-                .Include(m => m.Transcript)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            ViewData["Title"] = "Meeting Details";
 
+            var meeting = await mediator.Send(new GetMeetingByIdQuery { MeetingId = id });
             if (meeting == null) return NotFound();
 
-            bool canAccess = meeting.HostId == CurrentUserId
-                || meeting.Participants.Any(p => p.UserId == CurrentUserId);
-
-            if (!canAccess) return Forbid();
+            ViewBag.IsHost = meeting.HostId == CurrentUserId;
+            ViewBag.CurrentUid = CurrentUserId;
 
             return View(meeting);
         }
 
-        // CREATE 
-        public IActionResult Create() => View(new CreateMeetingViewModel());
 
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(CreateMeetingViewModel vm)
+        public async Task<IActionResult> Start(Guid meetingId)
         {
-            if (!ModelState.IsValid) return View(vm);
-
-            var meetingId = Guid.NewGuid();
-
-            var meeting = new Meeting
+            await mediator.Send(new StartMeetingCommand
             {
-                Id = meetingId,
-                Title = vm.Title,
-                JitsiRoomId = GenerateRoomId(vm.Title),
-                ScheduledAt = vm.ScheduledAt.ToUniversalTime(),
-                Status = MeetingStatus.Scheduled,
-                HostId = CurrentUserId,
-            };
-
-            _db.Meetings.Add(meeting);
-            await _db.SaveChangesAsync(); // Save meeting first so FK exists
-
-            // Now add host as participant with valid FK
-            var hostParticipant = new MeetingParticipant
-            {
-                Id = Guid.NewGuid(),
                 MeetingId = meetingId,
-                UserId = CurrentUserId,
-                JoinedAt = DateTime.UtcNow,
-            };
-            _db.MeetingParticipants.Add(hostParticipant);
-            await _db.SaveChangesAsync();
+                UserId = CurrentUserId
+            });
+
+            return RedirectToAction(nameof(Room), new { id = meetingId });
+        }
+
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancel(Guid meetingId)
+        {
+            await mediator.Send(new CancelMeetingCommand
+            {
+                MeetingId = meetingId,
+                UserId = CurrentUserId
+            });
+
+            TempData["Success"] = "Meeting cancelled.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Jitsi embedded room
+        //[HttpGet]
+        //public async Task<IActionResult> Room(Guid id)
+        //{
+        //    var meeting = await mediator.Send(new GetMeetingByIdQuery { MeetingId = id });
+        //    if (meeting == null) return NotFound();
+
+        //    if (meeting.Status == MeetingStatus.Cancelled)
+        //        return BadRequest("Meeting is cancelled.");
+
+        //    if (meeting.Status == MeetingStatus.Ended)
+        //        return RedirectToAction(nameof(Details), new { id });
+
+        //    var isHost = meeting.HostId == CurrentUserId;
+
+        //    // Record participant join
+        //    await mediator.Send(new JoinMeetingCommand
+        //    {
+        //        MeetingId = id,
+        //        UserId = CurrentUserId
+        //    });
+
+        //    // Generate Jitsi JWT (only needed for self-hosted / JaaS)
+        //    var token = jitsiTokenService.GenerateToken(
+        //        roomId: meeting.JitsiRoomId,
+        //        userId: CurrentUserId,
+        //        userName: CurrentUserName,
+        //        userEmail: CurrentUserEmail,
+        //        isModerator: isHost
+        //    );
+
+        //    ViewData["Title"] = meeting.Title;
+        //    ViewBag.Meeting = meeting;
+        //    ViewBag.IsHost = isHost;
+        //    ViewBag.JitsiToken = token;
+        //    ViewBag.UserName = CurrentUserName;
+        //    ViewBag.UserEmail = CurrentUserEmail;
+
+        //    return View(meeting);
+        //}
+
+
+        [HttpGet]
+        public async Task<IActionResult> Room(Guid id)
+        {
+            var meeting = await mediator.Send(new GetMeetingByIdQuery { MeetingId = id });
+            if (meeting == null) return NotFound();
+
+            if (meeting.Status == MeetingStatus.Cancelled)
+                return BadRequest("Meeting is cancelled.");
+
+            if (meeting.Status == MeetingStatus.Ended)
+                return RedirectToAction(nameof(Details), new { id });
+
+            await mediator.Send(new JoinMeetingCommand
+            {
+                MeetingId = id,
+                UserId = CurrentUserId
+            });
+
+            ViewData["Title"] = meeting.Title;
+            ViewBag.IsHost = meeting.HostId == CurrentUserId;
+            ViewBag.UserName = CurrentUserName;
+            ViewBag.UserEmail = CurrentUserEmail;
+
+            return View(meeting);
+        }
+
+
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Leave(Guid meetingId)
+        {
+            await mediator.Send(new LeaveMeetingCommand
+            {
+                MeetingId = meetingId,
+                UserId = CurrentUserId
+            });
 
             return RedirectToAction(nameof(Details), new { id = meetingId });
         }
 
-        // JOIN 
-        public async Task<IActionResult> Join(Guid id)
-        {
-            // Load meeting WITHOUT tracking participants — we manage them separately
-            var meeting = await _db.Meetings
-                .Include(m => m.Host)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (meeting == null) return NotFound();
-
-            if (meeting.Status == MeetingStatus.Ended ||
-                meeting.Status == MeetingStatus.Cancelled)
-            {
-                TempData["Error"] = "This meeting has already ended.";
-                return RedirectToAction(nameof(Details), new { id = id.ToString() });
-            }
-
-            bool isHost = meeting.HostId == CurrentUserId;
-
-            
-            // Check if this user already has a participant record
-            var existingParticipant = await _db.MeetingParticipants
-                .FirstOrDefaultAsync(p => p.MeetingId == id && p.UserId == CurrentUserId);
-
-            if (existingParticipant == null)
-            {
-                // New participant — insert fresh row
-                var newParticipant = new MeetingParticipant
-                {
-                    Id = Guid.NewGuid(),
-                    MeetingId = id,
-                    UserId = CurrentUserId,
-                    JoinedAt = DateTime.UtcNow,
-                    LeftAt = null,
-                };
-                _db.MeetingParticipants.Add(newParticipant);
-            }
-            else
-            {
-                // Existing participant rejoining — update join time
-                existingParticipant.JoinedAt = DateTime.UtcNow;
-                existingParticipant.LeftAt = null;
-                _db.MeetingParticipants.Update(existingParticipant);
-            }
-
-            // Update meeting status if host is joining for the first time 
-            if (isHost && meeting.StartedAt == null)
-            {
-                await _db.Meetings
-                    .Where(m => m.Id == id)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(m => m.StartedAt, DateTime.UtcNow)
-                        .SetProperty(m => m.Status, MeetingStatus.InProgress));
-            }
-
-            await _db.SaveChangesAsync();
-
-            // Build Jitsi token if configured 
-            string? token = null;
-            if (_config.GetValue<bool>("Jitsi:UseToken"))
-            {
-                token = _jitsiTokenService.GenerateToken(
-                    meeting.JitsiRoomId,
-                    CurrentUserId,
-                    CurrentUserName,
-                    isHost);
-            }
-
-            var vm = new JitsiRoomViewModel
-            {
-                Meeting = meeting,
-                JwtToken = token,
-                IsHost = isHost,
-                JitsiDomain = _config["Jitsi:Domain"] ?? "meet.jit.si",
-                DisplayName = CurrentUserName,
-                AvatarUrl = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(CurrentUserName)}&background=1332e1&color=fff",
-            };
-
-            return View(vm);
-        }
-
-     
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> End(Guid id)
+        public async Task<IActionResult> End(Guid meetingId)
         {
-            // Verify caller is the host
-            var meeting = await _db.Meetings
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (meeting == null)
-                return NotFound();
-
-            if (meeting.HostId != CurrentUserId)
+            await mediator.Send(new EndMeetingCommand
             {
-                TempData["Error"] = "Only the host can end this meeting.";
-                return RedirectToAction(nameof(Details), new { id = id.ToString() });
-            }
+                MeetingId = meetingId,
+                UserId = CurrentUserId
+            });
 
-            if (meeting.Status != MeetingStatus.Ended)
-            {
-                var endedAt = DateTime.UtcNow;
-
-                // Update meeting directly via ExecuteUpdate — no tracking conflict
-                await _db.Meetings
-                    .Where(m => m.Id == id)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(m => m.EndedAt, endedAt)
-                        .SetProperty(m => m.Status, MeetingStatus.Ended));
-
-                // Mark all participants as left
-                await _db.MeetingParticipants
-                    .Where(p => p.MeetingId == id && p.LeftAt == null)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(p => p.LeftAt, endedAt));
-            }
-
-            TempData["Success"] = "Meeting ended. You can now upload a transcript and generate a summary.";
-
-            // Explicit route value — avoids the redirect-to-End bug
-            return RedirectToAction(nameof(Details), new { id = id.ToString() });
-        }
-
-        // LEAVE (participant) 
-        [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Leave(Guid id)
-        {
-            await _db.MeetingParticipants
-                .Where(p => p.MeetingId == id && p.UserId == CurrentUserId)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(p => p.LeftAt, DateTime.UtcNow));
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        // DELETE (host only) 
-        [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var meeting = await _db.Meetings
-                .FirstOrDefaultAsync(m => m.Id == id && m.HostId == CurrentUserId);
-
-            if (meeting == null)
-            {
-                TempData["Error"] = "Meeting not found or you are not the host.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            _db.Meetings.Remove(meeting);
-            await _db.SaveChangesAsync();
-
-            TempData["Success"] = "Meeting deleted.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        // HELPERS 
-        private static string GenerateRoomId(string title)
-        {
-            var slug = new string(
-                title.ToLower().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray()
-            ).Trim('-');
-
-            return $"meetiq-{slug}-{Guid.NewGuid().ToString("N")[..8]}";
+            TempData["Success"] = "Meeting ended.";
+            return RedirectToAction(nameof(Details), new { id = meetingId });
         }
     }
 }

@@ -1,0 +1,182 @@
+﻿@using MeetIQ.Application.Features.Meetings.DTOs
+@model MeetingDetailsDto
+
+@{
+    ViewData["Title"] = Model.Title;
+    var isHost = (bool)ViewBag.IsHost;
+    var userName = ViewBag.UserName as string;
+    var userEmail = ViewBag.UserEmail as string;
+    Layout = "_Layout";
+}
+
+<style>
+    /* ── إلغاء padding الصفحة وخلي الـ container يملا كل حاجة ── */
+    .page-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* topbar = 56px, room-bar = 49px, footer = 37px */
+    #jitsi-container {
+        height: calc(100vh - 56px - 49px - 37px);
+        width: 100%;
+    }
+
+    /* ── Toast notification ── */
+    #copy-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(12px);
+        opacity: 0;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 9999;
+        pointer-events: none;
+    }
+
+        #copy-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+</style>
+
+<!-- ✅ Hidden leave form -->
+<form id="leave-form" asp-action="Leave" method="post" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="meetingId" value="@Model.Id" />
+</form>
+
+<!-- ✅ Toast -->
+<div id="copy-toast"
+     class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-card border border-emerald-500/30
+            text-emerald-400 text-sm font-medium shadow-lg">
+    <i data-lucide="check-circle" class="w-4 h-4"></i>
+    Meeting link copied!
+</div>
+
+<div class="flex flex-col" style="height: calc(100vh - 56px - 37px);">
+
+    <!-- Room Topbar -->
+    <div class="flex items-center justify-between px-5 py-3 bg-surface-card border-b border-surface-border shrink-0">
+        <div class="flex items-center gap-3">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-sm font-semibold text-white">@Model.Title</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+
+            <!-- Copy Link -->
+            <button id="copy-btn" onclick="copyRoomLink(event)"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border
+                           text-slate-400 hover:text-white hover:border-brand-600 text-xs font-medium transition-colors">
+                <i data-lucide="link" class="w-3.5 h-3.5"></i>
+                Copy Link
+            </button>
+
+            <!-- Leave -->
+            <button onclick="document.getElementById('leave-form').submit()"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/30
+                           border border-red-500/30 text-red-400 text-xs font-medium transition-colors">
+                <i data-lucide="phone-off" class="w-3.5 h-3.5"></i>
+                Leave
+            </button>
+
+            <!-- End for All (host only) -->
+            @if (isHost)
+            {
+                <form asp-action="End" method="post" class="mb-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="meetingId" value="@Model.Id" />
+                    <button type="submit"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500
+                                   text-white text-xs font-semibold transition-colors">
+                        <i data-lucide="phone-off" class="w-3.5 h-3.5"></i>
+                        End for All
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+
+    <!-- Jitsi Container — يملأ الباقي -->
+    <div id="jitsi-container" class="flex-1 bg-black w-full"></div>
+</div>
+
+@section Scripts {
+    <script src="https://meet.jit.si/external_api.js"></script>
+    <script>
+        const domain = 'meet.jit.si';
+        const roomName = '@Model.JitsiRoomId';
+        const userName = '@Html.Raw(userName)';
+        const userEmail = '@Html.Raw(userEmail)';
+        const isHost = @(isHost ? "true" : "false");
+
+        const options = {
+            roomName,
+            parentNode: document.getElementById('jitsi-container'),
+            width: '100%',
+            height: '100%',
+            userInfo: {
+                displayName: userName,
+                email: userEmail
+            },
+            configOverwrite: {
+                startWithAudioMuted: false,
+                startWithVideoMuted: false,
+                disableDeepLinking: true,
+                prejoinPageEnabled: false,
+                enableWelcomePage: false,
+                toolbarButtons: [
+                    'microphone', 'camera', 'closedcaptions', 'desktop',
+                    'fullscreen', 'fodeviceselection', 'hangup', 'chat',
+                    'raisehand', 'videoquality', 'tileview',
+                    'select-background', 'settings'
+                ]
+            },
+            interfaceConfigOverwrite: {
+                TOOLBAR_ALWAYS_VISIBLE: true,
+                SHOW_JITSI_WATERMARK: false,
+                SHOW_WATERMARK_FOR_GUESTS: false,
+                DEFAULT_BACKGROUND: '#0f1117',
+            }
+        };
+
+        const api = new JitsiMeetExternalAPI(domain, options);
+
+        // ── لما المستخدم يضغط hang up جوه Jitsi ──────────────
+        api.addEventListeners({
+            videoConferenceLeft: () => {
+                document.getElementById('leave-form').submit();
+            }
+        });
+
+        // ── Copy room link + toast indicator ──────────────────
+        function copyRoomLink(event) {
+            const link = `${window.location.origin}/Meetings/Room/@Model.Id`;
+
+            navigator.clipboard.writeText(link).then(() => {
+                // Toast
+                const toast = document.getElementById('copy-toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2500);
+
+                // Button feedback
+                const btn = document.getElementById('copy-btn');
+                btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i> Copied!';
+                btn.classList.add('text-emerald-400', 'border-emerald-500/30');
+                btn.classList.remove('text-slate-400', 'border-surface-border');
+                lucide.createIcons();
+
+                setTimeout(() => {
+                    btn.innerHTML = '<i data-lucide="link" class="w-3.5 h-3.5"></i> Copy Link';
+                    btn.classList.remove('text-emerald-400', 'border-emerald-500/30');
+                    btn.classList.add('text-slate-400', 'border-surface-border');
+                    lucide.createIcons();
+                }, 2500);
+            });
+        }
+    </script>
+}

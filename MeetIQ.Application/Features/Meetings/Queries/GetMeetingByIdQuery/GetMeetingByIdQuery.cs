@@ -1,10 +1,10 @@
 ﻿using MediatR;
-using MeetIQ.Domain.Entities;
+using MeetIQ.Application.Features.Meetings.DTOs;
 
 namespace MeetIQ.Application.Features.Meetings.Queries.GetMeetingByIdQuery
 {
-    public class GetMeetingByIdQuery : IRequest<Meeting>
+    public class GetMeetingByIdQuery : IRequest<MeetingDetailsDto?>
     {
-        public Guid Id { get; set; }
+        public Guid MeetingId { get; set; }
     }
 }

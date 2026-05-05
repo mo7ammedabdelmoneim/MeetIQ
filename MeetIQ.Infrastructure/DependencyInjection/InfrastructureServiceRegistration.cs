@@ -73,10 +73,9 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<ISystemHealthRepository, SystemHealthRepository>();
 
-
             // Services
             services.AddScoped<IAuthService, AuthService>();
-            services.AddSingleton<JitsiTokenService>();
+            services.AddScoped<IJitsiTokenService, JitsiTokenService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFileStorageService, LocalFileStorageService>();
 

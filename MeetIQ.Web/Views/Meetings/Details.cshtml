@@ -1,230 +1,254 @@
-﻿@model Meeting
+﻿@model MeetingDetailsDto
+
 @{
     ViewData["Title"] = Model.Title;
-    var isHost = Model.HostId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    var duration = Model.StartedAt.HasValue && Model.EndedAt.HasValue
-        ? (Model.EndedAt.Value - Model.StartedAt.Value)
-        : (TimeSpan?)null;
+    var isHost = (bool)ViewBag.IsHost;
+    var currentUid = ViewBag.CurrentUid as string;
+
+    var statusConfig = new Dictionary<MeetingStatus, (string Label, string Color)>
+    {
+        { MeetingStatus.Scheduled,  ("Scheduled",  "text-brand-400 bg-brand-400/10 border-brand-400/20") },
+        { MeetingStatus.InProgress, ("Live",        "text-emerald-400 bg-emerald-400/10 border-emerald-400/20") },
+        { MeetingStatus.Ended,      ("Ended",       "text-slate-400 bg-slate-400/10 border-slate-400/20") },
+        { MeetingStatus.Cancelled,  ("Cancelled",   "text-red-400 bg-red-400/10 border-red-400/20") },
+    };
+    var (statusLabel, statusColor) = statusConfig[Model.Status];
 }
 
-<div class="space-y-6 max-w-4xl">
+<div class="max-w-3xl mx-auto space-y-6">
 
-    <!-- ─── Header card ─────────────────────────────────────────────────── -->
+    <!-- Back -->
+    <a href="@Url.Action("Index")"
+       class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Back to Meetings
+    </a>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+            <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+            @TempData["Success"]
+        </div>
+    }
+
+    <!-- Header Card -->
     <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl @(Model.Status == MeetingStatus.InProgress ? "bg-red-500/10 border border-red-500/20" : "bg-brand-900/30 border border-brand-800/30") flex items-center justify-center">
-                    <i data-lucide="video" class="w-7 h-7 @(Model.Status == MeetingStatus.InProgress ? "text-red-400" : "text-brand-400")"></i>
-                </div>
-                <div>
-                    <h1 class="text-white font-semibold text-xl">@Model.Title</h1>
-                    <p class="text-slate-500 text-sm mt-0.5">
-                        @Model.ScheduledAt.ToLocalTime().ToString("dddd, MMMM d, yyyy · h:mm tt")
-                    </p>
-                </div>
-            </div>
-
-            <!-- Status + action -->
-            <div class="flex items-center gap-3">
-                @switch (Model.Status)
-                {
-                    case MeetingStatus.InProgress:
-                        <span class="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                            Live
-                        </span>
-                        <a asp-action="Join" asp-route-id="@Model.Id"
-                           class="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-glow">
-                            <i data-lucide="video" class="w-4 h-4"></i>
-                            Rejoin
-                        </a>
-                        break;
-                    case MeetingStatus.Scheduled:
-                        <span class="text-xs font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-full">
-                            Scheduled
-                        </span>
-                        <a asp-action="Join" asp-route-id="@Model.Id"
-                           class="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-glow">
-                            <i data-lucide="video" class="w-4 h-4"></i>
-                            Join Now
-                        </a>
-                        break;
-                    default:
-                        <span class="text-xs font-medium text-slate-500 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full">
-                            Ended
-                        </span>
-                        break;
-                }
-            </div>
-        </div>
-
-        <!-- Stats row -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-surface-border">
-            <div>
-                <p class="text-xs text-slate-600 mb-1">Host</p>
-                <p class="text-sm text-white font-medium">@(Model.Host?.UserName ?? "—")</p>
-            </div>
-            <div>
-                <p class="text-xs text-slate-600 mb-1">Participants</p>
-                <p class="text-sm text-white font-medium">@Model.Participants.Count</p>
-            </div>
-            <div>
-                <p class="text-xs text-slate-600 mb-1">Duration</p>
-                <p class="text-sm text-white font-medium">
-                    @(duration.HasValue ? $"{(int)duration.Value.TotalMinutes}m {duration.Value.Seconds}s" : "—")
-                </p>
-            </div>
-            <div>
-                <p class="text-xs text-slate-600 mb-1">Room ID</p>
-                <p class="text-xs text-slate-400 font-mono truncate">@Model.JitsiRoomId</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- ─── Left: Participants + Actions ──────────────────────────────── -->
-        <div class="space-y-4">
-
-            <!-- Participants -->
-            <div class="bg-surface-card border border-surface-border rounded-2xl p-5">
-                <p class="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-4">Participants</p>
-                <div class="space-y-2">
-                    @foreach (var p in Model.Participants)
+        <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+                <div class="flex items-center gap-3 flex-wrap mb-3">
+                    <h2 class="text-xl font-semibold text-white truncate">@Model.Title</h2>
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full border @statusColor">
+                        @if (Model.Status == MeetingStatus.InProgress)
+                        {
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="relative flex h-1.5 w-1.5">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                </span>
+                                @statusLabel
+                            </span>
+                        }
+                        else
+                        {
+                            @statusLabel
+                        }
+                    </span>
+                    @if (isHost)
                     {
-                        <div class="flex items-center gap-3">
-                            <div class="w-7 h-7 rounded-full bg-brand-900 border border-brand-800 flex items-center justify-center text-brand-300 text-xs font-semibold shrink-0">
-                                @(p.User?.UserName?.Substring(0, 1).ToUpper() ?? "?")
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-sm text-white truncate">@(p.User?.UserName ?? "Unknown")</p>
-                                <p class="text-[11px] text-slate-600">
-                                    @(p.LeftAt.HasValue
-                                        ? $"Left {p.LeftAt.Value.ToLocalTime():h:mm tt}"
-                                        : $"Joined {p.JoinedAt.ToLocalTime():h:mm tt}")
-                                </p>
-                            </div>
-                            @if (p.UserId == Model.HostId)
-                            {
-                                <span class="text-[10px] text-brand-400 bg-brand-500/10 border border-brand-500/20 px-1.5 py-0.5 rounded-full">Host</span>
-                            }
-                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full border
+                                     text-violet-400 bg-violet-400/10 border-violet-400/20">Host</span>
                     }
                 </div>
+
+                <!-- Meta -->
+                <div class="space-y-2 text-sm text-slate-500">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-4 h-4 shrink-0"></i>
+                        <span>@Model.ScheduledAt.ToLocalTime().ToString("dddd, MMMM dd yyyy — HH:mm")</span>
+                    </div>
+                    @if (Model.Duration.HasValue)
+                    {
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4 shrink-0"></i>
+                            <span>Duration: @((int)Model.Duration.Value.TotalMinutes) minutes</span>
+                        </div>
+                    }
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4 shrink-0"></i>
+                        <span>@Model.ParticipantsCount participant(s)</span>
+                    </div>
+                </div>
             </div>
 
-            @if (isHost @* && Model.Status == MeetingStatus.Scheduled *@)
-            {
-                <!-- Host actions -->
-                <div class="bg-surface-card border border-surface-border rounded-2xl p-5 space-y-3">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-600">Actions</p>
-                    <form asp-action="Delete" method="post" onsubmit="return confirm('Delete this meeting?')">
-                        <input type="hidden" name="id" value="@Model.Id" />
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-2 shrink-0">
+                @if (Model.Status == MeetingStatus.Scheduled && isHost)
+                {
+                    <form asp-action="Start" method="post">
                         @Html.AntiForgeryToken()
+                        <input type="hidden" name="meetingId" value="@Model.Id" />
                         <button type="submit"
-                                class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600/10 hover:bg-red-600/20 border border-red-600/20 hover:border-red-600/40 text-red-400 text-xs font-medium rounded-xl transition-colors">
-                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            Delete Meeting
+                                class="w-full flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500
+                                       text-white text-sm font-semibold rounded-xl transition-colors">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            Start Meeting
                         </button>
                     </form>
+                }
+
+                @if (Model.Status == MeetingStatus.InProgress)
+                {
+                    <a href="@Url.Action("Room", new { id = Model.Id })"
+                       class="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500
+                              text-white text-sm font-semibold rounded-xl transition-colors shadow-glow text-center justify-center">
+                        <i data-lucide="video" class="w-4 h-4"></i>
+                        Join Room
+                    </a>
+
+                    @if (isHost)
+                    {
+                        <form asp-action="End" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="meetingId" value="@Model.Id" />
+                            <button type="submit"
+                                    class="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border
+                                           border-red-500/30 text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors">
+                                <i data-lucide="phone-off" class="w-4 h-4"></i>
+                                End Meeting
+                            </button>
+                        </form>
+                    }
+                }
+
+                @if (Model.Status == MeetingStatus.Scheduled && isHost)
+                {
+                    <form asp-action="Cancel" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="meetingId" value="@Model.Id" />
+                        <button type="submit"
+                                class="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border
+                                       border-surface-border text-slate-500 hover:text-red-400 hover:border-red-500/30
+                                       text-sm font-medium transition-colors">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i>
+                            Cancel
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        <!-- Host -->
+        <div class="bg-surface-card border border-surface-border rounded-xl p-4">
+            <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Host</p>
+            <div class="flex items-center gap-3">
+                @if (!string.IsNullOrEmpty(Model.HostAvatarUrl))
+                {
+                    <img src="@Model.HostAvatarUrl" class="w-8 h-8 rounded-full object-cover shrink-0" />
+                }
+                else
+                {
+                    <div class="w-8 h-8 rounded-full bg-brand-900 border border-brand-700
+                                flex items-center justify-center text-brand-300 text-xs font-semibold shrink-0">
+                        @Model.HostName.Substring(0, 1).ToUpper()
+                    </div>
+                }
+                <div class="min-w-0">
+                    <p class="text-sm font-medium text-white truncate">@Model.HostName</p>
+                    <p class="text-xs text-slate-500 truncate">@Model.HostEmail</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Transcript -->
+        <div class="bg-surface-card border border-surface-border rounded-xl p-4">
+            <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Transcript</p>
+            @if (Model.HasTranscript)
+            {
+                <a href="@Url.Action("Details", "Transcripts", new { id = Model.TranscriptId })"
+                   class="flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 transition-colors">
+                    <i data-lucide="mic-2" class="w-4 h-4"></i>
+                    View Transcript
+                </a>
+            }
+            else
+            {
+                <p class="text-sm text-slate-600 flex items-center gap-2">
+                    <i data-lucide="mic-off" class="w-4 h-4"></i>
+                    Not available
+                </p>
             }
         </div>
 
-        <!-- ─── Right: AI outputs ──────────────────────────────────────────── -->
-        <div class="lg:col-span-2 space-y-4">
-
-            <!-- Transcript -->
-            <div class="bg-surface-card border border-surface-border rounded-2xl p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="mic-2" class="w-4 h-4 text-brand-400"></i>
-                        <p class="text-sm font-medium text-white">Transcript</p>
-                    </div>
-                    @if (Model.Transcript != null)
-                    {
-                        <a asp-controller="Transcripts" asp-action="Details" asp-route-id="@Model.Transcript.Id"
-                           class="text-xs text-brand-400 hover:text-brand-300 transition-colors">View full →</a>
-                    }
-                </div>
-                @if (Model.Transcript != null)
-                {
-                    @* <p class="text-slate-400 text-sm line-clamp-4">@Model.Transcript.Content[..Math.Min(300, Model.Transcript.Content.Length)]…</p> *@
-                }
-                else if (Model.Status == MeetingStatus.Ended)
-                {
-                    <div class="flex items-center gap-3 py-3">
-                        <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center">
-                            <i data-lucide="upload" class="w-4 h-4 text-slate-500"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-slate-400">No transcript yet</p>
-                            <a asp-controller="Transcripts" asp-action="Create" asp-route-meetingId="@Model.Id"
-                               class="text-xs text-brand-400 hover:text-brand-300">Upload transcript →</a>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <p class="text-slate-600 text-sm">Available after the meeting ends.</p>
-                }
-            </div>
-
-            <!-- Summary -->
-            <div class="bg-surface-card border border-surface-border rounded-2xl p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="sparkles" class="w-4 h-4 text-brand-400"></i>
-                        <p class="text-sm font-medium text-white">AI Summary</p>
-                    </div>
-                    @if (Model.Summary != null)
-                    {
-                        <a asp-controller="Summaries" asp-action="Details" asp-route-id="@Model.Summary.Id"
-                           class="text-xs text-brand-400 hover:text-brand-300 transition-colors">View full →</a>
-                    }
-                </div>
-                @if (Model.Summary != null)
-                {
-                    @* <p class="text-slate-400 text-sm line-clamp-4">@Model.Summary.Content[..Math.Min(300, Model.Summary.Content.Length)]…</p> *@
-                }
-                else if (Model.Transcript != null)
-                {
-                    <a asp-controller="Summaries" asp-action="Generate" asp-route-meetingId="@Model.Id"
-                       class="flex items-center gap-2 px-3 py-2 bg-brand-600/10 hover:bg-brand-600/20 border border-brand-600/20 text-brand-400 text-xs font-medium rounded-xl transition-colors w-fit">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                        Generate Summary
-                    </a>
-                }
-                else
-                {
-                    <p class="text-slate-600 text-sm">Add a transcript first to generate an AI summary.</p>
-                }
-            </div>
-
-            <!-- Tasks -->
-            @if (Model.Tasks.Any())
+        <!-- Summary -->
+        <div class="bg-surface-card border border-surface-border rounded-xl p-4">
+            <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">AI Summary</p>
+            @if (Model.HasSummary)
             {
-                <div class="bg-surface-card border border-surface-border rounded-2xl p-5">
-                    <div class="flex items-center gap-2 mb-4">
-                        <i data-lucide="check-square" class="w-4 h-4 text-brand-400"></i>
-                        <p class="text-sm font-medium text-white">Action Items</p>
-                        <span class="ml-auto text-xs text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded-md">@Model.Tasks.Count</span>
-                    </div>
-                    <div class="space-y-2">
-                        @foreach (var task in Model.Tasks.Take(5))
-                        {
-                            <div class="flex items-center gap-3 py-1">
-                                <div class="w-4 h-4 rounded border border-slate-600 shrink-0"></div>
-                                <p class="text-sm text-slate-300">@task.Title</p>
-                            </div>
-                        }
-                    </div>
-                </div>
+                <a href="@Url.Action("Details", "Summaries", new { id = Model.SummaryId })"
+                   class="flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition-colors">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    View Summary
+                </a>
+            }
+            else
+            {
+                <p class="text-sm text-slate-600 flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    Not generated
+                </p>
             }
         </div>
     </div>
-</div>
 
-@section Scripts {
-    <script>lucide.createIcons();</script>
-}
+    <!-- Participants -->
+    @if (Model.Participants.Any())
+    {
+        <div class="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-surface-border">
+                <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                    <i data-lucide="users" class="w-4 h-4 text-slate-500"></i>
+                    Participants (@Model.Participants.Count)
+                </h3>
+            </div>
+            <div class="divide-y divide-surface-border">
+                @foreach (var p in Model.Participants)
+                {
+                    var duration = p.LeftAt.HasValue
+                    ? $"{(int)(p.LeftAt.Value - p.JoinedAt).TotalMinutes}m"
+                    : "Still in";
+
+                    <div class="flex items-center justify-between px-5 py-3.5">
+                        <div class="flex items-center gap-3">
+                            @if (!string.IsNullOrEmpty(p.AvatarUrl))
+                            {
+                                <img src="@p.AvatarUrl" class="w-7 h-7 rounded-full object-cover shrink-0" />
+                            }
+                            else
+                            {
+                                <div class="w-7 h-7 rounded-full bg-surface border border-surface-border
+                                            flex items-center justify-center text-slate-400 text-xs font-semibold shrink-0">
+                                    @p.FullName.Substring(0, 1).ToUpper()
+                                </div>
+                            }
+                            <div>
+                                <p class="text-sm text-white font-medium">@p.FullName</p>
+                                <p class="text-xs text-slate-500">@p.Email</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-slate-500">@p.JoinedAt.ToLocalTime().ToString("HH:mm")</p>
+                            <p class="text-xs @(p.LeftAt.HasValue ? "text-slate-600" : "text-emerald-500")">
+                                @duration
+                            </p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

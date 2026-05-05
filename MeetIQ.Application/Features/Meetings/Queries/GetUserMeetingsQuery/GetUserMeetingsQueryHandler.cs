@@ -4,18 +4,20 @@ using MeetIQ.Application.Interfaces.Repositories;
 
 namespace MeetIQ.Application.Features.Meetings.Queries.GetUserMeetingsQuery
 {
-    public class GetUserMeetingsQueryHandler : IRequestHandler<GetUserMeetingsQuery, List<MeetingListItemDto>>
+    public class GetUserMeetingsQueryHandler : IRequestHandler<GetUserMeetingsQuery, List<MeetingSelectDto>>
     {
-        private readonly IMeetingRepository _repo;
+        private readonly IMeetingRepository meetingRepository;
 
-        public GetUserMeetingsQueryHandler(IMeetingRepository repo)
+        public GetUserMeetingsQueryHandler(IMeetingRepository meetingRepository)
         {
-            _repo = repo;
+            this.meetingRepository = meetingRepository;
         }
 
-        public async Task<List<MeetingListItemDto>> Handle(GetUserMeetingsQuery request, CancellationToken cancellationToken)
+        public async Task<List<MeetingSelectDto>> Handle(
+            GetUserMeetingsQuery request,
+            CancellationToken cancellationToken)
         {
-            return await _repo.GetUserMeetingsAsync(request);
+            return await meetingRepository.GetUserMeetingSelectListAsync(request.UserId);
         }
     }
 }

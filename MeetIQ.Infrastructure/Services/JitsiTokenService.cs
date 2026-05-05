@@ -1,78 +1,69 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using MeetIQ.Application.Interfaces.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 
 namespace MeetIQ.Infrastructure.Services
 {
-    public class JitsiTokenService
+    public class JitsiTokenService : IJitsiTokenService
     {
-        private readonly IConfiguration _config;
-        private readonly ILogger<JitsiTokenService> _logger;
+        private readonly IConfiguration config;
 
-        public JitsiTokenService(IConfiguration config, ILogger<JitsiTokenService> logger)
+        public JitsiTokenService(IConfiguration config)
         {
-            _config = config;
-            _logger = logger;
+            this.config = config;
         }
 
         public string GenerateToken(
-            string roomName,
+            string roomId,
             string userId,
-            string displayName,
+            string userName,
+            string userEmail,
             bool isModerator)
         {
-            var secret = _config["Jitsi:AppSecret"] ?? throw new InvalidOperationException("Jitsi:AppSecret not configured");
-            var appId = _config["Jitsi:AppId"] ?? throw new InvalidOperationException("Jitsi:AppId not configured");
-            var domain = _config["Jitsi:Domain"] ?? "meet.jit.si";
-            var expMins = _config.GetValue<int>("Jitsi:TokenExpiryMinutes", 120);
+            var appId = config["Jitsi:AppId"]!;
+            var secret = config["Jitsi:AppSecret"]!;
+            var domain = config["Jitsi:Domain"]!;          // e.g. meet.jit.si
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var now = DateTime.UtcNow;
-
-            // Jitsi expects a specific context claim structure
             var context = new
             {
                 user = new
                 {
                     id = userId,
-                    name = displayName,
-                    moderator = isModerator.ToString().ToLower(),
+                    name = userName,
+                    email = userEmail,
+                    moderator = isModerator
                 },
                 features = new
                 {
+                    recording = isModerator,
                     livestreaming = false,
-                    outbound_call = false,
-                    transcription = false,
-                    recording = false,
+                    outbound_call = false
                 }
             };
 
             var claims = new[]
             {
-                new Claim("iss",     appId),
-                new Claim("sub",     domain),
-                new Claim("aud",     "jitsi"),
-                new Claim("room",    roomName),
-                new Claim("context", System.Text.Json.JsonSerializer.Serialize(context)),
+                new Claim("sub", domain),
+                new Claim("iss", appId),
+                new Claim("aud", appId),
+                new Claim("room", roomId),
+                new Claim("context", System.Text.Json.JsonSerializer.Serialize(context))
             };
 
             var token = new JwtSecurityToken(
-                issuer: appId,
-                audience: "jitsi",
                 claims: claims,
-                notBefore: now,
-                expires: now.AddMinutes(expMins),
+                notBefore: DateTime.UtcNow,
+                expires: DateTime.UtcNow.AddHours(3),
                 signingCredentials: creds
             );
 
-            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-            _logger.LogDebug("Generated Jitsi token for room {Room}, user {User}", roomName, userId);
-            return tokenString;
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

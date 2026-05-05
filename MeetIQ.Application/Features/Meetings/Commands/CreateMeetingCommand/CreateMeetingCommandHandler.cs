@@ -1,40 +1,54 @@
 ﻿using MediatR;
+using MeetIQ.Application.Common.Exceptions;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Domain.Entities;
 using MeetIQ.Domain.Enums;
-using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
 
 namespace MeetIQ.Application.Features.Meetings.Commands.CreateMeetingCommand
 {
     public class CreateMeetingCommandHandler : IRequestHandler<CreateMeetingCommand, Guid>
     {
-        private readonly IRepository<Meeting> _repo;
-        private readonly IHttpContextAccessor _http;
+        private readonly IMeetingRepository meetingRepository;
+        private readonly IUserRepository userRepository;
 
-        public CreateMeetingCommandHandler(IRepository<Meeting> repo, IHttpContextAccessor http)
+        public CreateMeetingCommandHandler(
+            IMeetingRepository meetingRepository,
+            IUserRepository userRepository)
         {
-            _repo = repo;
-            _http = http;
+            this.meetingRepository = meetingRepository;
+            this.userRepository = userRepository;
         }
 
-        public async Task<Guid> Handle(CreateMeetingCommand request, CancellationToken cancellationToken)
+        public async Task<Guid> Handle(
+            CreateMeetingCommand request,
+            CancellationToken cancellationToken)
         {
-            var userId = _http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var host = await userRepository.GetAsync(x => x.Id == request.HostId);
+            if (host == null)
+                throw new NotFoundException("Host user not found");
+
+            // Generate a unique Jitsi room id: slugified title + short guid
+            var slug = new string(request.Title
+                .ToLower()
+                .Where(c => char.IsLetterOrDigit(c) || c == ' ')
+                .ToArray())
+                .Replace(' ', '-');
+
+            var jitsiRoomId = $"meetiq-{slug}-{Guid.NewGuid().ToString("N")[..8]}";
 
             var meeting = new Meeting
             {
+                Id = Guid.NewGuid(),
                 Title = request.Title,
+                JitsiRoomId = jitsiRoomId,
                 ScheduledAt = request.ScheduledAt,
-                HostId = userId,
-
-                JitsiRoomId = $"meetiq-{Guid.NewGuid()}",
-
-                Status = MeetingStatus.Scheduled
+                Status = MeetingStatus.Scheduled,
+                HostId = request.HostId,
+                CreatedAt = DateTime.UtcNow
             };
 
-            await _repo.AddAsync(meeting);
-            await _repo.SaveChangesAsync();
+            await meetingRepository.AddAsync(meeting);
+            await meetingRepository.SaveChangesAsync();
 
             return meeting.Id;
         }

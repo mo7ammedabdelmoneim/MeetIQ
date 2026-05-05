@@ -1,37 +1,32 @@
 ﻿using MediatR;
 using MeetIQ.Application.Interfaces.Repositories;
-using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
 
 namespace MeetIQ.Application.Features.Meetings.Commands.LeaveMeetingCommand
 {
-    public class LeaveMeetingCommandHandler : IRequestHandler<LeaveMeetingCommand,Unit>
+    public class LeaveMeetingCommandHandler : IRequestHandler<LeaveMeetingCommand, bool>
     {
-        private readonly IMeetingParticipantRepository meetingParticipantRepository;
-        private readonly IHttpContextAccessor _http;
+        private readonly IMeetingRepository meetingRepository;
 
-        public LeaveMeetingCommandHandler(IMeetingParticipantRepository meetingParticipantRepository , IHttpContextAccessor http)
+        public LeaveMeetingCommandHandler(IMeetingRepository meetingRepository)
         {
-            this.meetingParticipantRepository = meetingParticipantRepository;
-            _http = http;
+            this.meetingRepository = meetingRepository;
         }
 
-        public async Task<Unit> Handle(LeaveMeetingCommand request, CancellationToken cancellationToken)
+        public async Task<bool> Handle(
+            LeaveMeetingCommand request,
+            CancellationToken cancellationToken)
         {
-            var userId = _http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var participant = await meetingRepository.GetParticipantAsync(
+                request.MeetingId, request.UserId);
 
-            var participant = await meetingParticipantRepository.GetAsync(x =>
-                x.MeetingId == request.MeetingId &&
-                x.UserId == userId);
+            if (participant == null)
+                return true;
 
-            if (participant != null)
-            {
-                participant.LeftAt = DateTime.UtcNow;
-                meetingParticipantRepository.Update(participant);
-                await meetingParticipantRepository.SaveChangesAsync();
-            }
+            participant.LeftAt = DateTime.UtcNow;
+            meetingRepository.UpdateParticipant(participant);
+            await meetingRepository.SaveChangesAsync();
 
-            return Unit.Value;
+            return true;
         }
     }
 }

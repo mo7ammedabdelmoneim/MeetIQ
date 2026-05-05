@@ -1,4 +1,6 @@
-﻿using MeetIQ.Application.Features.Meetings.DTOs;
+﻿using MeetIQ.Application.Common.Results;
+using MeetIQ.Application.Features.Meetings.DTOs;
+using MeetIQ.Application.Features.Meetings.Queries.GetMeetingsQuery;
 using MeetIQ.Application.Features.Meetings.Queries.GetUserMeetingsQuery;
 using MeetIQ.Domain.Entities;
 
@@ -6,6 +8,13 @@ namespace MeetIQ.Application.Interfaces.Repositories
 {
     public interface IMeetingRepository:IRepository<Meeting>
     {
-        Task<List<MeetingListItemDto>> GetUserMeetingsAsync(GetUserMeetingsQuery query);
+        Task<MeetingDetailsDto?> GetByIdAsync(Guid id);
+        Task<PagedResult<MeetingListItemDto>> GetMeetingsAsync(GetMeetingsQuery query);
+        Task<List<MeetingSelectDto>> GetUserMeetingSelectListAsync(string userId);
+        Task<MeetingParticipant?> GetParticipantAsync(Guid meetingId, string userId);
+        Task AddParticipantAsync(MeetingParticipant participant);
+        void UpdateParticipant(MeetingParticipant participant);
+        Task MarkAllParticipantsLeftAsync(Guid meetingId, DateTime leftAt); 
+
     }
 }

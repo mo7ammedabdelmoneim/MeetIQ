@@ -1,37 +1,59 @@
 ﻿using MediatR;
+using MeetIQ.Application.Common.Exceptions;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Domain.Entities;
-using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
+using MeetIQ.Domain.Enums;
 
 namespace MeetIQ.Application.Features.Meetings.Commands.JoinMeetingCommand
 {
-    public class JoinMeetingCommandHandler : IRequestHandler<JoinMeetingCommand,Unit>
+    public class JoinMeetingCommandHandler : IRequestHandler<JoinMeetingCommand, bool>
     {
-        private readonly IMeetingParticipantRepository meetingParticipantRepository;
-        private readonly IHttpContextAccessor http;
+        private readonly IMeetingRepository meetingRepository;
 
-        public JoinMeetingCommandHandler(IMeetingParticipantRepository meetingParticipantRepository, IHttpContextAccessor http)
+        public JoinMeetingCommandHandler(IMeetingRepository meetingRepository)
         {
-            this.meetingParticipantRepository = meetingParticipantRepository;
-            this.http = http;
+            this.meetingRepository = meetingRepository;
         }
 
-        public async Task<Unit> Handle(JoinMeetingCommand request, CancellationToken cancellationToken)
+        public async Task<bool> Handle(
+            JoinMeetingCommand request,
+            CancellationToken cancellationToken)
         {
-            var userId = http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var meeting = await meetingRepository.GetAsync(x => x.Id == request.MeetingId);
 
-            var participant = new MeetingParticipant
+            if (meeting == null)
+                throw new NotFoundException("Meeting not found");
+
+            if (meeting.Status == MeetingStatus.Cancelled)
+                throw new BadRequestException("Cannot join a cancelled meeting");
+
+            if (meeting.Status == MeetingStatus.Ended)
+                throw new BadRequestException("Cannot join a meeting that has ended");
+
+            // Upsert participant — avoid duplicates
+            var existing = await meetingRepository.GetParticipantAsync(request.MeetingId, request.UserId);
+
+            if (existing == null)
             {
-                MeetingId = request.MeetingId,
-                UserId = userId,
-                JoinedAt = DateTime.UtcNow
-            };
+                var participant = new MeetingParticipant
+                {
+                    Id = Guid.NewGuid(),
+                    MeetingId = request.MeetingId,
+                    UserId = request.UserId,
+                    JoinedAt = DateTime.UtcNow
+                };
+                await meetingRepository.AddParticipantAsync(participant);
+            }
+            else
+            {
+                // Re-joining — reset LeftAt
+                existing.LeftAt = null;
+                existing.JoinedAt = DateTime.UtcNow;
+                meetingRepository.UpdateParticipant(existing);
+            }
 
-            await meetingParticipantRepository.AddAsync(participant);
-            await meetingParticipantRepository.SaveChangesAsync();
-
-            return Unit.Value;
+            await meetingRepository.SaveChangesAsync();
+            return true;
         }
     }
 }

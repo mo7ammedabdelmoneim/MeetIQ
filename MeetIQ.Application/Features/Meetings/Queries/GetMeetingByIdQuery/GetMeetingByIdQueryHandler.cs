@@ -1,10 +1,10 @@
 ﻿using MediatR;
+using MeetIQ.Application.Features.Meetings.DTOs;
 using MeetIQ.Application.Interfaces.Repositories;
-using MeetIQ.Domain.Entities;
 
 namespace MeetIQ.Application.Features.Meetings.Queries.GetMeetingByIdQuery
 {
-    public class GetMeetingByIdQueryHandler : IRequestHandler<GetMeetingByIdQuery, Meeting>
+    public class GetMeetingByIdQueryHandler : IRequestHandler<GetMeetingByIdQuery, MeetingDetailsDto?>
     {
         private readonly IMeetingRepository meetingRepository;
 
@@ -13,9 +13,11 @@ namespace MeetIQ.Application.Features.Meetings.Queries.GetMeetingByIdQuery
             this.meetingRepository = meetingRepository;
         }
 
-        public async Task<Meeting> Handle(GetMeetingByIdQuery request, CancellationToken cancellationToken)
+        public async Task<MeetingDetailsDto?> Handle(
+            GetMeetingByIdQuery request,
+            CancellationToken cancellationToken)
         {
-            return await meetingRepository.GetAsync(x => x.Id == request.Id);
+            return await meetingRepository.GetByIdAsync(request.MeetingId);
         }
     }
 }
