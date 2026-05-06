@@ -1,8 +1,10 @@
 ﻿using MeetIQ.Application.Common.Results;
+using MeetIQ.Application.Features.Notifications.Job.DTOs;
 using MeetIQ.Application.Features.Tasks.DTOs;
 using MeetIQ.Application.Features.Tasks.Queries.GetTasksQuery;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Domain.Entities;
+using MeetIQ.Domain.Enums;
 using SqlKata.Execution;
 
 namespace MeetIQ.Infrastructure.Presistence.Repositories
@@ -78,6 +80,51 @@ namespace MeetIQ.Infrastructure.Presistence.Repositories
                 .Where("Status", (int)Domain.Enums.TaskStatus.ToDo)
                 .Where("IsDeleted", false)
                 .CountAsync<int>();
+        }
+
+
+
+        public async Task<List<TaskDueDto>> GetTasksDueBetweenAsync(DateTime from, DateTime to)
+        {
+            return (await db.Query("TaskItems")
+                .WhereBetween("DueDate", from, to)
+                .WhereNotIn("Status", new[]
+                {
+                    (int)Domain.Enums.TaskStatus.Done,
+                    //(int)Domain.Enums.TaskStatus.Cancelled
+                })
+                .Where("IsDeleted", false)
+                .Select("Id", "Title", "UserId", "DueDate")
+                .GetAsync<TaskDueDto>()).ToList();
+        }
+
+        public async Task<List<TaskDueDto>> GetOverdueTasksAsync()
+        {
+            return (await db.Query("TaskItems")
+                .Where("DueDate", "<", DateTime.UtcNow)
+                .WhereNotIn("Status", new[]
+                {
+            (int)Domain.Enums.TaskStatus.Done,
+            //(int)Domain.Enums.TaskStatus.Cancelled
+                })
+                .Where("IsDeleted", false)
+                .Select("Id", "Title", "UserId", "DueDate")
+                .GetAsync<TaskDueDto>()).ToList();
+        }
+
+        public async Task<bool> WasNotifiedRecentlyAsync(
+            Guid taskId, NotificationType type, int withinHours)
+        {
+            var since = DateTime.UtcNow.AddHours(-withinHours);
+
+            var count = await db.Query("Notifications")
+                .Where("ReferenceId", taskId)
+                .Where("Type", (int)type)
+                .Where("CreatedAt", ">", since)
+                .Where("IsDeleted", false)
+                .CountAsync<int>();
+
+            return count > 0;
         }
     }
 }

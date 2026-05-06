@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using MeetIQ.Application.Common.Constants;
+using Microsoft.AspNetCore.Identity;
 
 namespace MeetIQ.Infrastructure.Identity
 {
@@ -6,7 +7,7 @@ namespace MeetIQ.Infrastructure.Identity
     {
         public static async Task SeedAsync(RoleManager<IdentityRole> roleManager)
         {
-            string[] roles = { "Admin", "User" };
+            string[] roles = { Roles.Admin, Roles.User };
 
             foreach (var role in roles)
             {

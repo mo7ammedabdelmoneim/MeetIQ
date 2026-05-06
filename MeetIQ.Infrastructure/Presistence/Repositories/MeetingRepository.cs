@@ -8,6 +8,7 @@ using MeetIQ.Infrastructure.Presistence.Repositories;
 using MeetIQ.Infrastructure.Presistence;
 using SqlKata.Execution;
 using Microsoft.EntityFrameworkCore;
+using MeetIQ.Application.Features.Notifications.Job.DTOs;
 
 namespace MeetIQ.Infrastructure.Persistence.Repositories
 {
@@ -144,6 +145,54 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
             await context.Set<MeetingParticipant>()
                 .Where(p => p.MeetingId == meetingId && p.LeftAt == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(p => p.LeftAt, leftAt));
+        }
+
+
+
+        public async Task<List<MeetingStartingDto>> GetMeetingsStartingBetweenAsync(DateTime from, DateTime to)
+        {
+            // Get meetings
+            var meetings = (await db.Query("Meetings as m")
+                .WhereBetween("m.ScheduledAt", from, to)
+                .Where("m.Status", (int)MeetingStatus.Scheduled)
+                //.Where("m.IsDeleted", false)
+                .Select("m.Id", "m.Title", "m.HostId", "m.ScheduledAt")
+                .GetAsync<MeetingStartingDto>()).ToList();
+
+            if (!meetings.Any()) return meetings;
+
+            // Get participants for each meeting
+            var meetingIds = meetings.Select(m => m.Id).ToList();
+
+            var participants = (await db.Query("MeetingParticipants")
+                .WhereIn("MeetingId", meetingIds)
+                .Select("MeetingId", "UserId")
+                .GetAsync()).ToList();
+
+            foreach (var meeting in meetings)
+            {
+                meeting.ParticipantIds = participants
+                    .Where(p => (Guid)p.MeetingId == meeting.Id)
+                    .Select(p => (string)p.UserId)
+                    .ToList();
+            }
+
+            return meetings;
+        }
+
+        public async Task<bool> WasNotifiedRecentlyAsync(
+            Guid meetingId, NotificationType type, int withinHours)
+        {
+            var since = DateTime.UtcNow.AddHours(-withinHours);
+
+            var count = await db.Query("Notifications")
+                .Where("ReferenceId", meetingId)
+                .Where("Type", (int)type)
+                .Where("CreatedAt", ">", since)
+                //.Where("IsDeleted", false)
+                .CountAsync<int>();
+
+            return count > 0;
         }
     }
 }

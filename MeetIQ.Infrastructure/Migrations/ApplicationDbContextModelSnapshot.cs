@@ -191,7 +191,7 @@ namespace MeetIQ.Infrastructure.Migrations
 
                     b.HasIndex("ReporterId");
 
-                    b.ToTable("FeedbackReports");
+                    b.ToTable("FeedbackReports", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.Meeting", b =>
@@ -231,7 +231,7 @@ namespace MeetIQ.Infrastructure.Migrations
 
                     b.HasIndex("HostId");
 
-                    b.ToTable("Meetings");
+                    b.ToTable("Meetings", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.MeetingParticipant", b =>
@@ -259,7 +259,7 @@ namespace MeetIQ.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("MeetingParticipants");
+                    b.ToTable("MeetingParticipants", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.MeetingSummary", b =>
@@ -289,7 +289,7 @@ namespace MeetIQ.Infrastructure.Migrations
                     b.HasIndex("MeetingId")
                         .IsUnique();
 
-                    b.ToTable("MeetingSummaries");
+                    b.ToTable("MeetingSummaries", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.MeetingTranscript", b =>
@@ -319,7 +319,7 @@ namespace MeetIQ.Infrastructure.Migrations
                     b.HasIndex("MeetingId")
                         .IsUnique();
 
-                    b.ToTable("MeetingTranscripts");
+                    b.ToTable("MeetingTranscripts", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.Note", b =>
@@ -374,7 +374,7 @@ namespace MeetIQ.Infrastructure.Migrations
 
                     b.HasIndex("MeetingId");
 
-                    b.ToTable("Notes");
+                    b.ToTable("Notes", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.NoteTag", b =>
@@ -389,7 +389,7 @@ namespace MeetIQ.Infrastructure.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("NoteTags");
+                    b.ToTable("NoteTags", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.Notification", b =>
@@ -438,7 +438,7 @@ namespace MeetIQ.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.Tag", b =>
@@ -455,7 +455,7 @@ namespace MeetIQ.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("MeetIQ.Domain.Entities.TaskItem", b =>
@@ -505,7 +505,7 @@ namespace MeetIQ.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("TaskItems");
+                    b.ToTable("TaskItems", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

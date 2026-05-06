@@ -1,4 +1,6 @@
-﻿using MeetIQ.Application.Interfaces;
+﻿using Hangfire;
+using Hangfire.SqlServer;
+using MeetIQ.Application.Interfaces;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Application.Services;
@@ -56,6 +58,27 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             .AddDefaultTokenProviders();
 
             services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>,AppClaimsPrincipalFactory>();
+
+
+            // Hangfire Registration 
+            services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
+                {
+                    CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                    SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                    QueuePollInterval = TimeSpan.Zero,
+                    UseRecommendedIsolationLevel = true,
+                    DisableGlobalLocks = true
+                }));
+
+            services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = 2; 
+            });
+
 
             // Repositories
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));

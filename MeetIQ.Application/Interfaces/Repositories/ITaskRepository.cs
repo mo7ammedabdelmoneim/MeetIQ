@@ -1,4 +1,5 @@
 ﻿using MeetIQ.Application.Common.Results;
+using MeetIQ.Application.Features.Notifications.Job.DTOs;
 using MeetIQ.Application.Features.Tasks.DTOs;
 using MeetIQ.Application.Features.Tasks.Queries.GetTasksQuery;
 using MeetIQ.Domain.Entities;
@@ -12,11 +13,9 @@ namespace MeetIQ.Application.Interfaces.Repositories
         Task<PagedResult<TaskListItemDto>> GetTasksAsync(GetTasksQuery query);
         Task<int> GetPendingTasksCount(string userId);
 
-
-        //Task<List<TaskDueDto>> GetTasksDueBetweenAsync(DateTime from, DateTime to);
-        //Task<List<TaskDueDto>> GetOverdueTasksAsync();
-        //Task<bool> HasRecentNotificationAsync(Guid taskId, NotificationType type, int hours);
-
+        Task<List<TaskDueDto>> GetTasksDueBetweenAsync(DateTime from, DateTime to);
+        Task<List<TaskDueDto>> GetOverdueTasksAsync();
+        Task<bool> WasNotifiedRecentlyAsync(Guid taskId, NotificationType type, int withinHours);
 
     }
 }
