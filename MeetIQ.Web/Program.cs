@@ -1,12 +1,10 @@
 using Hangfire;
 using MeetIQ.Application.DependencyInjection;
-using MeetIQ.Domain.Entities;
 using MeetIQ.Infrastructure.DependencyInjection;
 using MeetIQ.Infrastructure.Identity;
 using MeetIQ.Infrastructure.Jobs;
-using MeetIQ.Web.Filters;
+using MeetIQ.Infrastructure.SignalR;
 using MeetIQ.Web.Infrastructure;
-using Microsoft.AspNetCore.Identity;
 
 namespace MeetIQ.Web
 {
@@ -20,6 +18,7 @@ namespace MeetIQ.Web
             builder.Services.AddApplicationServices();
             builder.Services.AddInfrastructureServices(builder.Configuration);
             builder.Services.AddControllersWithViews();
+
 
             //builder.Services.AddControllersWithViews(options =>
             //            //{
@@ -111,7 +110,9 @@ namespace MeetIQ.Web
 
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}"); 
+                pattern: "{controller=Home}/{action=Index}/{id?}");
+            app.MapHub<NotificationHub>("/hubs/notifications");
+
 
             app.Run();
         }

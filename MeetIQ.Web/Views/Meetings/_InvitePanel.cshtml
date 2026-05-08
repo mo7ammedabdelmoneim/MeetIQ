@@ -1,0 +1,278 @@
+﻿@model MeetingDetailsDto
+
+@{
+    var isHost      = ViewBag.IsHost as bool? ?? false;
+    var canInvite   = isHost &&
+                      (Model.Status == MeetingStatus.Scheduled ||
+                       Model.Status == MeetingStatus.InProgress);
+}
+
+<div class="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+
+    <!-- Header -->
+    <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <i data-lucide="mail" class="w-4 h-4 text-slate-500"></i>
+            <h3 class="text-sm font-semibold text-white">
+                Invited People
+            </h3>
+            <span class="text-xs text-slate-600 font-normal">(@Model.Invitations.Count)</span>
+        </div>
+
+        @if (canInvite)
+        {
+            <button type="button"
+                    onclick="toggleInviteBox()"
+                    id="invite-toggle-btn"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500
+                           text-white text-xs font-semibold transition-colors shadow-glow">
+                <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                Invite Someone
+            </button>
+        }
+    </div>
+
+    @if (canInvite)
+    {
+        <div id="invite-box" class="hidden border-b border-surface-border">
+            <div class="px-5 py-4 space-y-3">
+
+                <!-- Explainer -->
+                <p class="text-xs text-slate-500">
+                    Search for a registered user by name or email to invite them to this meeting.
+                    They'll receive a notification and can accept or decline.
+                </p>
+
+                <!-- Search input -->
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                    <input type="text"
+                           id="invite-search"
+                           placeholder="Type a name or email address..."
+                           autocomplete="off"
+                           data-meeting-id="@Model.Id"
+                           class="w-full bg-surface border border-surface-border rounded-xl pl-9 pr-4 py-2.5
+                                  text-sm text-slate-300 placeholder-slate-600 focus:outline-none
+                                  focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 transition-colors" />
+                </div>
+
+                <!-- Search results -->
+                <div id="invite-results"
+                     class="hidden bg-surface border border-surface-border rounded-xl overflow-hidden shadow-lg">
+                </div>
+
+                <!-- Loading indicator -->
+                <div id="invite-loading" class="hidden flex items-center gap-2 text-xs text-slate-500 px-1">
+                    <svg class="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    Searching...
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Invitations List -->
+    @if (!Model.Invitations.Any())
+    {
+        <div class="flex flex-col items-center justify-center py-10 text-center px-5">
+            <div class="w-10 h-10 rounded-xl bg-surface border border-surface-border
+                        flex items-center justify-center mb-3">
+                <i data-lucide="user-plus" class="w-5 h-5 text-slate-600"></i>
+            </div>
+            <p class="text-slate-500 text-sm font-medium mb-0.5">No invitations sent yet</p>
+            @if (canInvite)
+            {
+                <p class="text-slate-600 text-xs">
+                    Use the <span class="text-brand-400 font-medium">Invite Someone</span> button above to add people.
+                </p>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="divide-y divide-surface-border">
+            @foreach (var inv in Model.Invitations)
+            {
+                var (label, color) = inv.Status switch
+                {
+                    InvitationStatus.Pending  => ("Pending",  "text-amber-400 bg-amber-400/10 border-amber-400/20"),
+                    InvitationStatus.Accepted => ("Accepted", "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"),
+                    InvitationStatus.Declined => ("Declined", "text-red-400 bg-red-400/10 border-red-400/20"),
+                    _                         => ("Unknown",  "text-slate-400 bg-slate-400/10 border-slate-400/20")
+                };
+
+                <div class="flex items-center justify-between px-5 py-3.5 hover:bg-surface-hover transition-colors">
+                    <div class="flex items-center gap-3 min-w-0">
+                        @if (!string.IsNullOrEmpty(inv.InvitedUserAvatarUrl))
+                        {
+                            <img src="@inv.InvitedUserAvatarUrl"
+                                 class="w-8 h-8 rounded-full object-cover shrink-0" />
+                        }
+                        else
+                        {
+                            <div class="w-8 h-8 rounded-full bg-surface border border-surface-border
+                                        flex items-center justify-center text-slate-400 text-xs font-semibold shrink-0">
+                                @inv.InvitedUserName.Substring(0, 1).ToUpper()
+                            </div>
+                        }
+                        <div class="min-w-0">
+                            <p class="text-sm text-white font-medium truncate">@inv.InvitedUserName</p>
+                            <p class="text-xs text-slate-500 truncate">@inv.InvitedUserEmail</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full border @color">
+                            @label
+                        </span>
+
+                        @if (isHost && inv.Status == InvitationStatus.Pending)
+                        {
+                            <form asp-action="RevokeInvitation" method="post" class="mb-0">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="invitationId" value="@inv.Id" />
+                                <input type="hidden" name="meetingId" value="@Model.Id" />
+                                <button type="submit"
+                                        title="Revoke invitation"
+                                        class="p-1.5 rounded-lg text-slate-600 hover:text-red-400
+                                               hover:bg-red-500/10 transition-colors">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+    // ── Toggle invite box ──────────────────────────────────────
+    function toggleInviteBox() {
+        const box = document.getElementById('invite-box');
+        const btn = document.getElementById('invite-toggle-btn');
+        const isHidden = box.classList.contains('hidden');
+
+        box.classList.toggle('hidden', !isHidden);
+
+        if (!isHidden) {
+            // closing
+            btn.innerHTML = '<i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Invite Someone';
+            btn.classList.replace('bg-surface-hover', 'bg-brand-600');
+        } else {
+            // opening — focus the input
+            btn.innerHTML = '<i data-lucide="x" class="w-3.5 h-3.5"></i> Cancel';
+            btn.classList.replace('bg-brand-600', 'bg-surface-hover');
+            document.getElementById('invite-search')?.focus();
+        }
+        lucide.createIcons();
+    }
+
+    // ── Search logic ───────────────────────────────────────────
+    const searchInput   = document.getElementById('invite-search');
+    const resultsBox    = document.getElementById('invite-results');
+    const loadingEl     = document.getElementById('invite-loading');
+
+    if (searchInput) {
+        const meetingId   = searchInput.dataset.meetingId;
+        const antiforgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+        let   debounce    = null;
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounce);
+            const term = searchInput.value.trim();
+
+            if (term.length < 2) {
+                resultsBox.classList.add('hidden');
+                loadingEl.classList.add('hidden');
+                resultsBox.innerHTML = '';
+                return;
+            }
+
+            loadingEl.classList.remove('hidden');
+            resultsBox.classList.add('hidden');
+
+            debounce = setTimeout(() => fetchUsers(term, meetingId, antiforgery), 300);
+        });
+
+        document.addEventListener('click', e => {
+            if (!searchInput.contains(e.target) && !resultsBox.contains(e.target)) {
+                resultsBox.classList.add('hidden');
+            }
+        });
+    }
+
+    async function fetchUsers(term, meetingId, antiforgery) {
+        try {
+            const res  = await fetch(`/Meetings/SearchUsers?term=${encodeURIComponent(term)}&meetingId=${meetingId}`);
+            const data = await res.json();
+
+            loadingEl?.classList.add('hidden');
+
+            if (!data.length) {
+                resultsBox.innerHTML = `
+                    <div class="flex items-center gap-2 px-4 py-3 text-xs text-slate-500">
+                        <i data-lucide="search-x" class="w-3.5 h-3.5 shrink-0"></i>
+                        No users found matching "<strong class="text-slate-400">${term}</strong>"
+                    </div>`;
+                resultsBox.classList.remove('hidden');
+                lucide.createIcons();
+                return;
+            }
+
+            resultsBox.innerHTML = data.map(u => `
+                <div class="flex items-center justify-between px-4 py-3
+                            hover:bg-surface-hover transition-colors border-b border-surface-border last:border-0">
+                    <div class="flex items-center gap-3 min-w-0">
+                        ${u.avatarUrl
+                            ? `<img src="${u.avatarUrl}" class="w-8 h-8 rounded-full object-cover shrink-0" />`
+                            : `<div class="w-8 h-8 rounded-full bg-surface-card border border-surface-border
+                                          flex items-center justify-center text-slate-400 text-xs font-semibold shrink-0">
+                                 ${u.fullName.charAt(0).toUpperCase()}
+                               </div>`
+                        }
+                        <div class="min-w-0">
+                            <p class="text-sm text-white font-medium truncate">${u.fullName}</p>
+                            <p class="text-xs text-slate-500 truncate">${u.email}</p>
+                        </div>
+                    </div>
+                    <button onclick="inviteUser('${u.id}', '${meetingId}', '${antiforgery}')"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                                   bg-brand-600 hover:bg-brand-500
+                                   text-white text-xs font-semibold transition-colors shrink-0">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        Send Invite
+                    </button>
+                </div>
+            `).join('');
+
+            resultsBox.classList.remove('hidden');
+            lucide.createIcons();
+
+        } catch {
+            loadingEl?.classList.add('hidden');
+        }
+    }
+
+    async function inviteUser(userId, meetingId, antiforgery) {
+        // Optimistic UI — disable the clicked button
+        event.currentTarget.disabled  = true;
+        event.currentTarget.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Sending...';
+        lucide.createIcons();
+
+        const formData = new FormData();
+        formData.append('meetingId',     meetingId);
+        formData.append('invitedUserId', userId);
+        formData.append('__RequestVerificationToken', antiforgery);
+
+        const res = await fetch('/Meetings/Invite', { method: 'POST', body: formData });
+
+        // Reload to reflect new invitation in the list
+        window.location.reload();
+    }
+</script>
+}

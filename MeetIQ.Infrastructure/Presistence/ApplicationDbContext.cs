@@ -15,6 +15,7 @@ namespace MeetIQ.Infrastructure.Presistence
         public DbSet<FeedbackReport> FeedbackReports { get; set; }
         public DbSet<Meeting> Meetings { get; set; }
         public DbSet<MeetingParticipant> MeetingParticipants { get; set; }
+        public DbSet<MeetingInvitation> MeetingInvitations { get; set; }
         public DbSet<MeetingSummary> MeetingSummaries { get; set; }
         public DbSet<MeetingTranscript> MeetingTranscripts { get; set; }
         public DbSet<Note> Notes { get; set; }

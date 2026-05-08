@@ -56,6 +56,22 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
 
             meeting.ParticipantsCount = meeting.Participants.Count;
 
+            meeting.Invitations = (await db.Query("MeetingInvitations as mi")
+                .Join("AspNetUsers as u", "u.Id", "mi.InvitedUserId")
+                .Join("AspNetUsers as ib", "ib.Id", "mi.InvitedByUserId")
+                .Select(
+                    "mi.Id", "mi.MeetingId", "mi.InvitedUserId",
+                    "mi.Status", "mi.InvitedAt", "mi.RespondedAt",
+                    "u.FullName as InvitedUserName",
+                    "u.Email as InvitedUserEmail",
+                    "u.AvatarUrl as InvitedUserAvatarUrl",
+                    "ib.FullName as InvitedByName"
+                )
+                .Where("mi.MeetingId", id)
+                .OrderBy("mi.InvitedAt")
+                .GetAsync<MeetingInvitationDto>())
+                .ToList();
+
             return meeting;
         }
 
@@ -193,6 +209,83 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 .CountAsync<int>();
 
             return count > 0;
+        }
+
+
+
+        public async Task<MeetingInvitation?> GetInvitationAsync(Guid meetingId, string userId)
+        {
+            return await context.Set<MeetingInvitation>()
+                .FirstOrDefaultAsync(x => x.MeetingId == meetingId && x.InvitedUserId == userId);
+        }
+
+        public async Task<MeetingInvitation?> GetInvitationByIdAsync(Guid invitationId)
+        {
+            return await context.Set<MeetingInvitation>()
+                .FirstOrDefaultAsync(x => x.Id == invitationId);
+        }
+
+        public async Task<List<MeetingInvitationDto>> GetUserPendingInvitationsAsync(string userId)
+        {
+            var items = await db.Query("MeetingInvitations as mi")
+                .Join("Meetings as m", "m.Id", "mi.MeetingId")
+                .Join("AspNetUsers as ib", "ib.Id", "mi.InvitedByUserId")
+                .Select(
+                    "mi.Id", "mi.MeetingId", "mi.InvitedUserId",
+                    "mi.Status", "mi.InvitedAt", "mi.RespondedAt",
+                    "m.Title as MeetingTitle",
+                    "m.ScheduledAt as MeetingScheduledAt",
+                    "ib.FullName as InvitedByName"
+                )
+                .Where("mi.InvitedUserId", userId)
+                .Where("mi.Status", (int)Domain.Enums.InvitationStatus.Pending)
+                .OrderByDesc("mi.InvitedAt")
+                .GetAsync<MeetingInvitationDto>();
+
+            return items.ToList();
+        }
+
+        public async Task AddInvitationAsync(MeetingInvitation invitation)
+        {
+            await context.Set<MeetingInvitation>().AddAsync(invitation);
+        }
+
+        public void UpdateInvitation(MeetingInvitation invitation)
+        {
+            context.Set<MeetingInvitation>().Update(invitation);
+        }
+
+        public void DeleteInvitation(MeetingInvitation invitation)
+        {
+            context.Set<MeetingInvitation>().Remove(invitation);
+        }
+
+        public async Task<List<UserSearchResultDto>> SearchUsersToInviteAsync(
+            string term, Guid meetingId, string hostId, int limit)
+        {
+            var alreadyInvited = await db.Query("MeetingInvitations")
+                .Where("MeetingId", meetingId)
+                .Select("InvitedUserId")
+                .GetAsync<string>();
+
+            var excludedIds = alreadyInvited.Append(hostId).ToList();
+
+            var query = db.Query("AspNetUsers")
+                .Where("IsActive", true)
+                .Where(q => q
+                    .WhereLike("FullName", $"%{term}%")
+                    .OrWhereLike("Email", $"%{term}%")
+                );
+
+            foreach (var id in excludedIds)
+                query.WhereNot("Id", id);
+
+            var items = await query
+                .Select("Id", "FullName", "Email", "AvatarUrl")
+                .Limit(limit)
+                .GetAsync<UserSearchResultDto>();
+
+            return items.ToList();
         }
     }
 }

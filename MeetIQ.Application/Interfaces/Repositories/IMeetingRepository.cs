@@ -21,6 +21,13 @@ namespace MeetIQ.Application.Interfaces.Repositories
         Task<List<MeetingStartingDto>> GetMeetingsStartingBetweenAsync(DateTime from, DateTime to);
         Task<bool> WasNotifiedRecentlyAsync(Guid meetingId, NotificationType type, int withinHours);
 
+        Task<MeetingInvitation?> GetInvitationAsync(Guid meetingId, string userId);
+        Task<MeetingInvitation?> GetInvitationByIdAsync(Guid invitationId);
+        Task<List<MeetingInvitationDto>> GetUserPendingInvitationsAsync(string userId);
+        Task AddInvitationAsync(MeetingInvitation invitation);
+        void UpdateInvitation(MeetingInvitation invitation);
+        void DeleteInvitation(MeetingInvitation invitation);
+        Task<List<UserSearchResultDto>> SearchUsersToInviteAsync(string term, Guid meetingId, string hostId, int limit);
 
     }
 }

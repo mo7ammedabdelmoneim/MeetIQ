@@ -22,6 +22,7 @@ namespace MeetIQ.Application.Features.Meetings.DTOs
         public Guid? TranscriptId { get; set; }
         public Guid? SummaryId { get; set; }
         public List<MeetingParticipantDto> Participants { get; set; } = [];
+        public List<MeetingInvitationDto> Invitations { get; set; } = [];
 
         public TimeSpan? Duration => StartedAt.HasValue && EndedAt.HasValue
             ? EndedAt.Value - StartedAt.Value

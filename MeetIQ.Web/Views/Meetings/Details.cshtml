@@ -7,10 +7,10 @@
 
     var statusConfig = new Dictionary<MeetingStatus, (string Label, string Color)>
     {
-        { MeetingStatus.Scheduled,  ("Scheduled",  "text-brand-400 bg-brand-400/10 border-brand-400/20") },
+        { MeetingStatus.Scheduled,  ("Scheduled",  "text-brand-400 bg-brand-400/10 border-brand-400/20")   },
         { MeetingStatus.InProgress, ("Live",        "text-emerald-400 bg-emerald-400/10 border-emerald-400/20") },
-        { MeetingStatus.Ended,      ("Ended",       "text-slate-400 bg-slate-400/10 border-slate-400/20") },
-        { MeetingStatus.Cancelled,  ("Cancelled",   "text-red-400 bg-red-400/10 border-red-400/20") },
+        { MeetingStatus.Ended,      ("Ended",       "text-slate-400 bg-slate-400/10 border-slate-400/20")   },
+        { MeetingStatus.Cancelled,  ("Cancelled",   "text-red-400 bg-red-400/10 border-red-400/20")         },
     };
     var (statusLabel, statusColor) = statusConfig[Model.Status];
 }
@@ -26,7 +26,8 @@
 
     @if (TempData["Success"] != null)
     {
-        <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+        <div class="flex items-center gap-3 px-4 py-3 rounded-xl
+                    bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
             <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
             @TempData["Success"]
         </div>
@@ -60,8 +61,6 @@
                                      text-violet-400 bg-violet-400/10 border-violet-400/20">Host</span>
                     }
                 </div>
-
-                <!-- Meta -->
                 <div class="space-y-2 text-sm text-slate-500">
                     <div class="flex items-center gap-2">
                         <i data-lucide="calendar" class="w-4 h-4 shrink-0"></i>
@@ -96,16 +95,14 @@
                         </button>
                     </form>
                 }
-
                 @if (Model.Status == MeetingStatus.InProgress)
                 {
                     <a href="@Url.Action("Room", new { id = Model.Id })"
                        class="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500
-                              text-white text-sm font-semibold rounded-xl transition-colors shadow-glow text-center justify-center">
+                              text-white text-sm font-semibold rounded-xl transition-colors shadow-glow justify-center">
                         <i data-lucide="video" class="w-4 h-4"></i>
                         Join Room
                     </a>
-
                     @if (isHost)
                     {
                         <form asp-action="End" method="post">
@@ -120,7 +117,6 @@
                         </form>
                     }
                 }
-
                 @if (Model.Status == MeetingStatus.Scheduled && isHost)
                 {
                     <form asp-action="Cancel" method="post">
@@ -128,8 +124,8 @@
                         <input type="hidden" name="meetingId" value="@Model.Id" />
                         <button type="submit"
                                 class="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border
-                                       border-surface-border text-slate-500 hover:text-red-400 hover:border-red-500/30
-                                       text-sm font-medium transition-colors">
+                                       border-surface-border text-slate-500 hover:text-red-400
+                                       hover:border-red-500/30 text-sm font-medium transition-colors">
                             <i data-lucide="x-circle" class="w-4 h-4"></i>
                             Cancel
                         </button>
@@ -141,8 +137,6 @@
 
     <!-- Info Row -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-        <!-- Host -->
         <div class="bg-surface-card border border-surface-border rounded-xl p-4">
             <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Host</p>
             <div class="flex items-center gap-3">
@@ -164,7 +158,6 @@
             </div>
         </div>
 
-        <!-- Transcript -->
         <div class="bg-surface-card border border-surface-border rounded-xl p-4">
             <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Transcript</p>
             @if (Model.HasTranscript)
@@ -184,7 +177,6 @@
             }
         </div>
 
-        <!-- Summary -->
         <div class="bg-surface-card border border-surface-border rounded-xl p-4">
             <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">AI Summary</p>
             @if (Model.HasSummary)
@@ -251,4 +243,7 @@
             </div>
         </div>
     }
+
+    @await Html.PartialAsync("_InvitePanel", Model)
+
 </div>

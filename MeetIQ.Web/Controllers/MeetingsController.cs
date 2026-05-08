@@ -13,6 +13,12 @@ using MeetIQ.Application.Features.Meetings.Queries.GetMeetingsQuery;
 using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Domain.Enums;
 using MeetIQ.Web.ViewModels.Meetings;
+using MeetIQ.Application.Features.Meetings.Commands.InviteUserCommand;
+using MeetIQ.Application.Features.Meetings.Commands.RespondToInvitationCommand;
+using MeetIQ.Application.Features.Meetings.Commands.RevokeInvitationCommand;
+using MeetIQ.Application.Features.Meetings.Queries.SearchUsersToInviteQuery;
+using MeetIQ.Infrastructure.Persistence.Repositories;
+using MeetIQ.Application.Features.Meetings.Queries.GetUserPendingInvitationsQuery;
 
 namespace MeetIQ.Web.Controllers
 {
@@ -130,6 +136,82 @@ namespace MeetIQ.Web.Controllers
 
             TempData["Success"] = "Meeting cancelled.";
             return RedirectToAction(nameof(Index));
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> SearchUsers(string term, Guid meetingId)
+        {
+            if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
+                return Json(new List<object>());
+
+            var results = await mediator.Send(new SearchUsersToInviteQuery
+            {
+                Term = term,
+                MeetingId = meetingId,
+                HostId = CurrentUserId,
+                Limit = 6
+            });
+
+            return Json(results);
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Invite(Guid meetingId, string invitedUserId)
+        {
+            await mediator.Send(new InviteUserCommand
+            {
+                MeetingId = meetingId,
+                InvitedUserId = invitedUserId,
+                InvitedByUserId = CurrentUserId
+            });
+
+            TempData["Success"] = "User invited successfully.";
+            return RedirectToAction(nameof(Details), new { id = meetingId });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> RevokeInvitation(Guid invitationId, Guid meetingId)
+        {
+            await mediator.Send(new RevokeInvitationCommand
+            {
+                InvitationId = invitationId,
+                HostId = CurrentUserId
+            });
+
+            TempData["Success"] = "Invitation revoked.";
+            return RedirectToAction(nameof(Details), new { id = meetingId });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Respond(Guid invitationId, InvitationStatus response, Guid meetingId)
+        {
+            await mediator.Send(new RespondToInvitationCommand
+            {
+                InvitationId = invitationId,
+                UserId = CurrentUserId,
+                Response = response
+            });
+
+            TempData["Success"] = response == InvitationStatus.Accepted
+                ? "Invitation accepted! You can now join the meeting."
+            : "Invitation declined.";
+
+            return RedirectToAction(nameof(Details), new { id = meetingId });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> MyInvitations()
+        {
+            ViewData["Title"] = "My Invitations";
+
+            var invitations = await mediator.Send(
+                new GetUserPendingInvitationsQuery
+                {
+                    UserId = CurrentUserId
+                });
+
+            return View(invitations);
         }
 
         // Jitsi embedded room

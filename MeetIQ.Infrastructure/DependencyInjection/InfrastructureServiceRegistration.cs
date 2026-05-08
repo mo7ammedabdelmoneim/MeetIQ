@@ -10,6 +10,7 @@ using MeetIQ.Infrastructure.Persistence.Repositories;
 using MeetIQ.Infrastructure.Presistence;
 using MeetIQ.Infrastructure.Presistence.Repositories;
 using MeetIQ.Infrastructure.Services;
+using MeetIQ.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -80,6 +81,11 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             });
 
 
+            // AddSignalR
+            services.AddSignalR();
+
+
+
             // Repositories
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -101,6 +107,11 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<IJitsiTokenService, JitsiTokenService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+
+
+
+            services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
 
             return services;
         }
