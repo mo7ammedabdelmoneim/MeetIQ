@@ -27,6 +27,7 @@ namespace MeetIQ.Application.Interfaces.Repositories
         Task AddInvitationAsync(MeetingInvitation invitation);
         void UpdateInvitation(MeetingInvitation invitation);
         void DeleteInvitation(MeetingInvitation invitation);
+        Task<List<string>> GetInvitedUserIdsAsync(Guid meetingId);
         Task<List<UserSearchResultDto>> SearchUsersToInviteAsync(string term, Guid meetingId, string hostId, int limit);
 
     }

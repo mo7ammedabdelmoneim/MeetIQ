@@ -2,21 +2,58 @@
 @{
     int count = Model;
 }
+<div class="relative" id="notif-wrapper">
 
-<a href="/Notifications"
-   class="relative p-2 rounded-lg hover:bg-surface-hover text-slate-400
-          hover:text-white transition-colors"
-   title="Notifications">
+    <!-- Bell Button -->
+    <button id="notif-btn"
+            onclick="toggleNotifPanel()"
+            class="relative p-2 rounded-lg hover:bg-surface-hover text-slate-400
+               hover:text-white transition-colors"
+            title="Notifications">
+        <i data-lucide="bell" class="w-[18px] h-[18px]"></i>
 
-    <i data-lucide="bell" class="w-[18px] h-[18px]"></i>
-
-    @if (count > 0)
-    {
-        <span class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1
-                     flex items-center justify-center
-                     rounded-full bg-brand-500 text-white
-                     text-[10px] font-bold leading-none shadow-glow">
+        <!-- Badge -->
+        <span id="notif-badge"
+              class="@(count > 0 ? "" : "hidden")
+                 absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1
+                 flex items-center justify-center rounded-full
+                 bg-brand-500 text-white text-[10px] font-bold leading-none shadow-glow">
             @(count > 99 ? "99+" : count.ToString())
         </span>
-    }
-</a>
+    </button>
+
+    <!-- Dropdown Panel -->
+    <div id="notif-panel"
+         class="hidden absolute right-0 top-full mt-2 w-80 z-50
+            bg-surface-card border border-surface-border rounded-2xl
+            shadow-2xl overflow-hidden">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-surface-border">
+            <h3 class="text-sm font-semibold text-white">Notifications</h3>
+            <div class="flex items-center gap-3">
+                <button onclick="markAllRead()"
+                        class="text-xs text-slate-500 hover:text-brand-400 transition-colors">
+                    Mark all read
+                </button>
+                <a href="/Notifications"
+                   class="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+                    See all
+                </a>
+            </div>
+        </div>
+
+        <!-- List -->
+        <div id="notif-list" class="max-h-[360px] overflow-y-auto">
+            <div id="notif-loading"
+                 class="flex items-center justify-center gap-2 py-8 text-xs text-slate-600">
+                <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10"
+                            stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Loading...
+            </div>
+        </div>
+    </div>
+</div>

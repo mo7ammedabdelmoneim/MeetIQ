@@ -13,6 +13,12 @@
         ParticipantJoined = 10,
         YouWereAddedToMeeting = 11,
 
+        // Invitations 
+        InvitationReceived = 12,
+        InvitationRevoked = 13,
+        InvitationAccepted = 14,
+        InvitationDeclined = 15,
+
         // AI Features
         TranscriptReady = 20,
         SummaryReady = 21,

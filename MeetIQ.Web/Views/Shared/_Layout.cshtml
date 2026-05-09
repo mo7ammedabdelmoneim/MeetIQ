@@ -105,7 +105,7 @@
             var h = href.ToLower();
             bool active = h == "/"
             ? currentPath == "/"
-            : currentPath == h || currentPath.StartsWith(h + "/");
+            : currentPath == h || (currentPath.StartsWith(h + "/") && h != "/meetings" || currentPath == h);
 
             return active
             ? "nav-item-active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white font-medium transition-colors"
@@ -117,7 +117,7 @@
             var h = href.ToLower();
             bool active = h == "/"
             ? currentPath == "/"
-            : currentPath == h || currentPath.StartsWith(h + "/");
+            : currentPath == h || (currentPath.StartsWith(h + "/") && h != "/meetings" || currentPath == h);
 
             return active
             ? "w-4 h-4 text-brand-400 shrink-0"
@@ -345,7 +345,8 @@
 <!-- Scripts -->
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
-
+<script src="~/lib/signalr/signalr.min.js"></script>
+<script src="~/js/realtime.js"></script>
 @await RenderSectionAsync("Scripts", required: false)
     <script>
         lucide.createIcons();

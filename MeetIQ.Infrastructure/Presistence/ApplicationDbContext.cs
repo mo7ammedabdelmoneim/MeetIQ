@@ -1,4 +1,5 @@
 ﻿using MeetIQ.Domain.Entities;
+using MeetIQ.Infrastructure.Persistence.Configurations;
 using MeetIQ.Infrastructure.Presistence.Configurations;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,8 @@ namespace MeetIQ.Infrastructure.Presistence
 
 
             builder.ApplyConfiguration(new CalendarEventConfiguration());
+            builder.ApplyConfiguration(new NotificationConfiguration());
+            builder.ApplyConfiguration(new MeetingInvitationConfiguration());
         }
     }
 }

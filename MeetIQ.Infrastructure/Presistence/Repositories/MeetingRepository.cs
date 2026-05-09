@@ -82,13 +82,17 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 .LeftJoin("MeetingTranscripts as tr", "tr.MeetingId", "m.Id")
                 .LeftJoin("MeetingSummaries as sm", "sm.MeetingId", "m.Id")
                 .Where(q => q
-                    .Where("m.HostId", query.UserId)
-                    .OrWhere(sub => sub
-                        .WhereExists(db.Query("MeetingParticipants")
-                            .WhereRaw("MeetingId = m.Id")
-                            .Where("UserId", query.UserId))
-                    )
-                );
+                .Where("m.HostId", query.UserId)
+                .OrWhereExists(
+                    db.Query("MeetingParticipants")
+                        .WhereRaw("MeetingId = m.Id")
+                        .Where("UserId", query.UserId))
+                .OrWhereExists(
+                    db.Query("MeetingInvitations")
+                        .WhereRaw("MeetingId = m.Id")
+                        .Where("InvitedUserId", query.UserId)
+                        .Where("Status", (int)InvitationStatus.Accepted))
+            );
 
             if (query.Status.HasValue)
                 baseQuery.Where("m.Status", (int)query.Status);
@@ -129,11 +133,19 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
 
         public async Task<List<MeetingSelectDto>> GetUserMeetingSelectListAsync(string userId)
         {
-            var items = await db.Query("Meetings")
-                .Where("HostId", userId)
-                .WhereIn("Status", new[] { (int)MeetingStatus.Scheduled, (int)MeetingStatus.InProgress })
-                .OrderByDesc("ScheduledAt")
-                .Select("Id", "Title")
+            var items = await db.Query("Meetings as m")
+                .Where(q => q
+                    .Where("m.HostId", userId)
+                    .OrWhereExists(
+                        db.Query("MeetingInvitations")
+                            .WhereRaw("MeetingId = m.Id")
+                            .Where("InvitedUserId", userId)
+                            .Where("Status", (int)InvitationStatus.Accepted)
+                    )
+                )
+                .WhereIn("m.Status", new[] { (int)MeetingStatus.Scheduled, (int)MeetingStatus.InProgress })
+                .OrderByDesc("m.ScheduledAt")
+                .Select("m.Id", "m.Title")
                 .GetAsync<MeetingSelectDto>();
 
             return items.ToList();
@@ -258,6 +270,16 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
         public void DeleteInvitation(MeetingInvitation invitation)
         {
             context.Set<MeetingInvitation>().Remove(invitation);
+        }
+
+        public async Task<List<string>> GetInvitedUserIdsAsync(Guid meetingId)
+        {
+            var items = await db.Query("MeetingInvitations")
+                .Where("MeetingId", meetingId)
+                .Select("InvitedUserId")
+                .GetAsync<string>();
+
+            return items.ToList();
         }
 
         public async Task<List<UserSearchResultDto>> SearchUsersToInviteAsync(

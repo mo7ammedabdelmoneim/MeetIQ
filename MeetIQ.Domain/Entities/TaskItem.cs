@@ -20,6 +20,10 @@ namespace MeetIQ.Domain.Entities
         public string UserId { get; set; }
         public ApplicationUser? User { get; set; }
 
+        //public string? AssigneeId { get; set; }
+        //public ApplicationUser? Assignee { get; set; }
+
+
         // Optional link to source meeting
         public Guid? MeetingId { get; set; }
         public Meeting? Meeting { get; set; }

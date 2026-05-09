@@ -5,6 +5,8 @@ using MeetIQ.Application.Features.Notifications.Commands.MarkAllAsReadCommand;
 using MeetIQ.Application.Features.Notifications.Commands.MarkAsReadCommand;
 using MeetIQ.Application.Features.Notifications.Queries.GetNotificationsQuery;
 using MeetIQ.Application.Features.Notifications.Queries.GetUnreadCountQuery;
+using MeetIQ.Application.Features.Notifications.Queries.GetUserNotificationsQuery;
+using MeetIQ.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -35,6 +37,20 @@ namespace MeetIQ.Web.Controllers
 
             ViewData["Title"] = "Notifications";
             return View(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Panel()
+        {
+            var items = await mediator.Send(
+                new GetUserNotificationsQuery
+                {
+                    UserId = UserId,
+                    Page = 1,
+                    PageSize = 15
+                });
+
+            return Json(items);
         }
 
         // AJAX – mark single as read, then redirect to ActionUrl

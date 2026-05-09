@@ -6,6 +6,7 @@ namespace MeetIQ.Application.Features.Tasks.DTOs
     {
         public Guid Id { get; set; }
         public string Title { get; set; }
+        public string? AssigneeName { get; set; }
 
         public Domain.Enums.TaskStatus Status { get; set; }
         public TaskPriority Priority { get; set; }

@@ -2,6 +2,7 @@
 using MeetIQ.Application.Features.Notifications.Commands.CreateNotificationCommand;
 using MeetIQ.Application.Interfaces;
 using MeetIQ.Application.Interfaces.Repositories;
+using MeetIQ.Domain.Entities;
 using MeetIQ.Domain.Enums;
 
 namespace MeetIQ.Application.Services
@@ -23,30 +24,36 @@ namespace MeetIQ.Application.Services
         }
 
         public async Task NotifyAsync(
-            string userId,
-            NotificationType type,
-            string title,
-            string message,
-            string? actionUrl = null,
-            Guid? referenceId = null,
-            NotificationReferenceType? referenceType = null)
+      string userId,
+      NotificationType type,
+      string title,
+      string message,
+      string? actionUrl = null,
+      Guid? referenceId = null,
+      NotificationReferenceType? referenceType = null)
         {
-            // 1 — Save to DB
-            var id = await mediator.Send(new CreateNotificationCommand
+            var notification = new Notification
             {
+                Id = Guid.NewGuid(),
                 UserId = userId,
                 Type = type,
                 Title = title,
                 Message = message,
                 ActionUrl = actionUrl,
                 ReferenceId = referenceId,
-                ReferenceType = referenceType
-            });
+                ReferenceType = referenceType,
+                IsRead = false,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow
+            };
 
-            // 2 — Push live notification via SignalR
+            await notificationRepository.AddAsync(notification);
+            await notificationRepository.SaveChangesAsync();
+
+            // Push live notification via SignalR
             await pusher.PushAsync(userId, new NotificationPushDto
             {
-                Id = id,
+                Id = notification.Id,
                 Title = title,
                 Message = message,
                 ActionUrl = actionUrl,
@@ -54,7 +61,7 @@ namespace MeetIQ.Application.Services
                 CreatedAt = "just now"
             });
 
-            // 3 — Push updated unread count
+            // Push updated unread count
             var unreadCount = await notificationRepository.GetUnreadCountAsync(userId);
             await pusher.PushUnreadCountAsync(userId, unreadCount);
         }

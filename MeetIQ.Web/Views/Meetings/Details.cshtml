@@ -1,4 +1,6 @@
-﻿@model MeetingDetailsDto
+﻿@using MeetIQ.Application.Features.Meetings.DTOs
+@using MeetIQ.Domain.Enums
+@model MeetingDetailsDto
 
 @{
     ViewData["Title"] = Model.Title;
@@ -7,10 +9,10 @@
 
     var statusConfig = new Dictionary<MeetingStatus, (string Label, string Color)>
     {
-        { MeetingStatus.Scheduled,  ("Scheduled",  "text-brand-400 bg-brand-400/10 border-brand-400/20")   },
-        { MeetingStatus.InProgress, ("Live",        "text-emerald-400 bg-emerald-400/10 border-emerald-400/20") },
-        { MeetingStatus.Ended,      ("Ended",       "text-slate-400 bg-slate-400/10 border-slate-400/20")   },
-        { MeetingStatus.Cancelled,  ("Cancelled",   "text-red-400 bg-red-400/10 border-red-400/20")         },
+        { MeetingStatus.Scheduled,  ("Scheduled",  "text-brand-400 bg-brand-400/10 border-brand-400/20")        },
+        { MeetingStatus.InProgress, ("Live",        "text-emerald-400 bg-emerald-400/10 border-emerald-400/20")  },
+        { MeetingStatus.Ended,      ("Ended",       "text-slate-400 bg-slate-400/10 border-slate-400/20")        },
+        { MeetingStatus.Cancelled,  ("Cancelled",   "text-red-400 bg-red-400/10 border-red-400/20")              },
     };
     var (statusLabel, statusColor) = statusConfig[Model.Status];
 }
@@ -244,6 +246,201 @@
         </div>
     }
 
+    <!-- Invite Panel -->
     @await Html.PartialAsync("_InvitePanel", Model)
 
 </div>
+
+@section Scripts {
+    <script>
+        const CSRF_TOKEN = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+        const MEETING_ID = '@Model.Id';
+
+        // ── Toggle invite box ──────────────────────────────────────
+        function toggleInviteBox() {
+            const box = document.getElementById('invite-box');
+            const btn = document.getElementById('invite-toggle-btn');
+
+            if (!box) return;
+
+            const isHidden = box.classList.contains('hidden');
+            box.classList.toggle('hidden', !isHidden);
+
+            if (isHidden) {
+                btn.innerHTML = '<i data-lucide="x" class="w-3.5 h-3.5"></i> Cancel';
+                btn.classList.remove('bg-brand-600', 'hover:bg-brand-500', 'shadow-glow');
+                btn.classList.add('bg-surface-hover', 'border', 'border-surface-border', 'text-slate-400');
+                document.getElementById('invite-search')?.focus();
+            } else {
+                btn.innerHTML = '<i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Invite Someone';
+                btn.classList.add('bg-brand-600', 'hover:bg-brand-500', 'shadow-glow');
+                btn.classList.remove('bg-surface-hover', 'border', 'border-surface-border', 'text-slate-400');
+                // reset search
+                const searchInput = document.getElementById('invite-search');
+                const resultsBox = document.getElementById('invite-results');
+                if (searchInput) searchInput.value = '';
+                if (resultsBox) { resultsBox.classList.add('hidden'); resultsBox.innerHTML = ''; }
+            }
+
+            lucide.createIcons();
+        }
+
+        // ── Search wiring ──────────────────────────────────────────
+        const searchInput = document.getElementById('invite-search');
+        const resultsBox = document.getElementById('invite-results');
+        const loadingEl = document.getElementById('invite-loading');
+
+        if (searchInput) {
+            let debounce = null;
+
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounce);
+                const term = searchInput.value.trim();
+
+                if (term.length < 2) {
+                    resultsBox.classList.add('hidden');
+                    loadingEl?.classList.add('hidden');
+                    resultsBox.innerHTML = '';
+                    return;
+                }
+
+                loadingEl?.classList.remove('hidden');
+                resultsBox.classList.add('hidden');
+                debounce = setTimeout(() => fetchUsers(term), 300);
+            });
+
+            document.addEventListener('click', e => {
+                if (!searchInput.contains(e.target) && !resultsBox?.contains(e.target))
+                    resultsBox?.classList.add('hidden');
+            });
+        }
+
+        // ── Fetch users ────────────────────────────────────────────
+        async function fetchUsers(term) {
+            try {
+                const res = await fetch(`/Meetings/SearchUsers?term=${encodeURIComponent(term)}&meetingId=${MEETING_ID}`);
+                const data = await res.json();
+
+                loadingEl?.classList.add('hidden');
+
+                if (!data.length) {
+                    resultsBox.innerHTML = `
+                            <div class="flex items-center gap-2 px-4 py-3 text-xs text-slate-500">
+                                <i data-lucide="search-x" class="w-3.5 h-3.5 shrink-0"></i>
+                                No users found matching
+                                "<strong class="text-slate-400">${escapeHtml(term)}</strong>"
+                            </div>`;
+                    resultsBox.classList.remove('hidden');
+                    lucide.createIcons();
+                    return;
+                }
+
+                resultsBox.innerHTML = data.map(u => `
+                        <div class="flex items-center justify-between px-4 py-3
+                                    hover:bg-surface-hover transition-colors
+                                    border-b border-surface-border last:border-0">
+                            <div class="flex items-center gap-3 min-w-0">
+                                ${u.avatarUrl
+                        ? `<img src="${escapeHtml(u.avatarUrl)}"
+                                            class="w-8 h-8 rounded-full object-cover shrink-0" />`
+                        : `<div class="w-8 h-8 rounded-full bg-surface-card border border-surface-border
+                                                  flex items-center justify-center text-slate-400 text-xs font-semibold shrink-0">
+                                         ${escapeHtml(u.fullName.charAt(0).toUpperCase())}
+                                       </div>`
+                    }
+                                <div class="min-w-0">
+                                    <p class="text-sm text-white font-medium truncate">${escapeHtml(u.fullName)}</p>
+                                    <p class="text-xs text-slate-500 truncate">${escapeHtml(u.email)}</p>
+                                </div>
+                            </div>
+                            <button data-user-id="${escapeHtml(u.id)}"
+                                    class="invite-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                                           bg-brand-600 hover:bg-brand-500 text-white
+                                           text-xs font-semibold transition-colors shrink-0">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                Send Invite
+                            </button>
+                        </div>
+                    `).join('');
+
+                resultsBox.classList.remove('hidden');
+                lucide.createIcons();
+
+             resultsBox.querySelectorAll('.invite-btn').forEach(btn => {
+                    btn.addEventListener('click', () => inviteUser(btn.dataset.userId, btn));
+                });
+
+            } catch (err) {
+                loadingEl?.classList.add('hidden');
+                console.error('Search failed:', err);
+            }
+        }
+
+        // ── Invite user ────────────────────────────────────────────
+        async function inviteUser(userId, btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg> Sending...`;
+
+            try {
+                const formData = new FormData();
+                formData.append('meetingId', MEETING_ID);
+                formData.append('invitedUserId', userId);
+                // ✅ الـ token بييجي من الـ global constant — مش من parameter
+                formData.append('__RequestVerificationToken', CSRF_TOKEN);
+
+                const res = await fetch('/Meetings/Invite', { method: 'POST', body: formData });
+
+                if (res.ok || res.redirected) {
+                    window.location.reload();
+                } else {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
+            } catch (err) {
+                console.error('Invite failed:', err);
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5"></i> Send Invite';
+                lucide.createIcons();
+
+                // error toast
+                showToast('Failed to send invitation. Please try again.', 'error');
+            }
+        }
+
+        // ── Toast helper ───────────────────────────────────────────
+        function showToast(message, type = 'success') {
+            const colors = type === 'error'
+                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2
+                                   px-4 py-2.5 rounded-xl border text-sm font-medium shadow-lg z-50
+                                   transition-all duration-200 opacity-0 translate-y-2 ${colors}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 200);
+            }, 3000);
+        }
+
+        // ── XSS protection ─────────────────────────────────────────
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+}
