@@ -1,16 +1,20 @@
-﻿namespace MeetIQ.Domain.Entities
+﻿using MeetIQ.Domain.Enums;
+
+namespace MeetIQ.Domain.Entities
 {
     public class MeetingTranscript
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string RawText { get; set; } = string.Empty;   // full Whisper output
-        public string? AudioFileUrl { get; set; }                    // encrypted at rest
-        public bool IsProcessed { get; set; } = false;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public Guid MeetingId { get; set; }
         public Meeting Meeting { get; set; } = null!;
-    }
 
-   
+        public string? AudioFilePath { get; set; }
+
+        public string? Text { get; set; }
+
+        public TranscriptStatus Status { get; set; } = TranscriptStatus.PendingTranscription;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; }
+    }
 }

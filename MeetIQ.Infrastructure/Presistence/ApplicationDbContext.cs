@@ -37,6 +37,7 @@ namespace MeetIQ.Infrastructure.Presistence
             builder.ApplyConfiguration(new CalendarEventConfiguration());
             builder.ApplyConfiguration(new NotificationConfiguration());
             builder.ApplyConfiguration(new MeetingInvitationConfiguration());
+            builder.ApplyConfiguration(new TaskItemConfiguration());
         }
     }
 }

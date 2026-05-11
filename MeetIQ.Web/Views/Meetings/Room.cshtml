@@ -1,5 +1,4 @@
-﻿@using MeetIQ.Application.Features.Meetings.DTOs
-@model MeetingDetailsDto
+﻿@model MeetingDetailsDto
 
 @{
     ViewData["Title"] = Model.Title;
@@ -10,19 +9,16 @@
 }
 
 <style>
-    /* ── إلغاء padding الصفحة وخلي الـ container يملا كل حاجة ── */
     .page-content {
         padding: 0 !important;
         max-width: 100% !important;
     }
 
-    /* topbar = 56px, room-bar = 49px, footer = 37px */
     #jitsi-container {
         height: calc(100vh - 56px - 49px - 37px);
         width: 100%;
     }
 
-    /* ── Toast notification ── */
     #copy-toast {
         position: fixed;
         bottom: 24px;
@@ -38,20 +34,64 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+    /* Recording pulse animation */
+    @@keyframes rec-pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.4;
+        }
+    }
+
+    .rec-dot {
+        animation: rec-pulse 1.4s ease-in-out infinite;
+    }
+
+    /* Upload progress bar */
+    #upload-bar-inner {
+        transition: width 0.3s ease;
+    }
 </style>
 
-<!-- ✅ Hidden leave form -->
+<!-- Hidden leave form -->
 <form id="leave-form" asp-action="Leave" method="post" class="hidden">
     @Html.AntiForgeryToken()
     <input type="hidden" name="meetingId" value="@Model.Id" />
 </form>
 
-<!-- ✅ Toast -->
+<!-- Hidden end form -->
+<form id="end-form" asp-action="End" method="post" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="meetingId" value="@Model.Id" />
+</form>
+
+<!-- Toast -->
 <div id="copy-toast"
      class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-card border border-emerald-500/30
             text-emerald-400 text-sm font-medium shadow-lg">
     <i data-lucide="check-circle" class="w-4 h-4"></i>
     Meeting link copied!
+</div>
+
+<!-- Upload overlay (shown while uploading after meeting ends) -->
+<div id="upload-overlay"
+     class="hidden fixed inset-0 z-50 bg-surface/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-8 flex flex-col items-center gap-4 w-80">
+        <div class="w-10 h-10 rounded-full bg-brand-600/20 flex items-center justify-center">
+            <i data-lucide="upload-cloud" class="w-5 h-5 text-brand-400"></i>
+        </div>
+        <div class="text-center">
+            <p class="text-white font-semibold text-sm">Uploading recording…</p>
+            <p class="text-slate-500 text-xs mt-1">Please don't close this tab</p>
+        </div>
+        <div class="w-full bg-surface-border rounded-full h-1.5">
+            <div id="upload-bar-inner" class="bg-brand-500 h-1.5 rounded-full" style="width: 0%"></div>
+        </div>
+        <p id="upload-status" class="text-slate-400 text-xs">Preparing…</p>
+    </div>
 </div>
 
 <div class="flex flex-col" style="height: calc(100vh - 56px - 37px);">
@@ -76,8 +116,21 @@
                 Copy Link
             </button>
 
+            <!-- ── Recording button (host only) ── -->
+            @if (isHost)
+            {
+                <button id="rec-btn" onclick="toggleRecording()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border
+                               text-slate-400 hover:text-white hover:border-red-500/50 text-xs font-medium transition-colors"
+                        title="Record meeting audio">
+                    <span class="rec-dot w-2 h-2 rounded-full bg-slate-500 shrink-0 hidden" id="rec-indicator"></span>
+                    <i data-lucide="mic" class="w-3.5 h-3.5" id="rec-icon"></i>
+                    <span id="rec-label">Record</span>
+                </button>
+            }
+
             <!-- Leave -->
-            <button onclick="document.getElementById('leave-form').submit()"
+            <button onclick="handleLeave()"
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/30
                            border border-red-500/30 text-red-400 text-xs font-medium transition-colors">
                 <i data-lucide="phone-off" class="w-3.5 h-3.5"></i>
@@ -87,42 +140,39 @@
             <!-- End for All (host only) -->
             @if (isHost)
             {
-                <form asp-action="End" method="post" class="mb-0">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="meetingId" value="@Model.Id" />
-                    <button type="submit"
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500
-                                   text-white text-xs font-semibold transition-colors">
-                        <i data-lucide="phone-off" class="w-3.5 h-3.5"></i>
-                        End for All
-                    </button>
-                </form>
+                <button onclick="handleEnd()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500
+                               text-white text-xs font-semibold transition-colors">
+                    <i data-lucide="phone-off" class="w-3.5 h-3.5"></i>
+                    End for All
+                </button>
             }
         </div>
     </div>
 
-    <!-- Jitsi Container — يملأ الباقي -->
+    <!-- Jitsi Container -->
     <div id="jitsi-container" class="flex-1 bg-black w-full"></div>
 </div>
 
 @section Scripts {
     <script src="https://meet.jit.si/external_api.js"></script>
     <script>
+        // ── Config ────────────────────────────────────────────────────────
         const domain = 'meet.jit.si';
         const roomName = '@Model.JitsiRoomId';
+        const meetingId = '@Model.Id';
         const userName = '@Html.Raw(userName)';
         const userEmail = '@Html.Raw(userEmail)';
         const isHost = @(isHost ? "true" : "false");
+        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
 
-        const options = {
+        // ── Jitsi ─────────────────────────────────────────────────────────
+        const api = new JitsiMeetExternalAPI(domain, {
             roomName,
             parentNode: document.getElementById('jitsi-container'),
             width: '100%',
             height: '100%',
-            userInfo: {
-                displayName: userName,
-                email: userEmail
-            },
+            userInfo: { displayName: userName, email: userEmail },
             configOverwrite: {
                 startWithAudioMuted: false,
                 startWithVideoMuted: false,
@@ -142,28 +192,270 @@
                 SHOW_WATERMARK_FOR_GUESTS: false,
                 DEFAULT_BACKGROUND: '#0f1117',
             }
-        };
-
-        const api = new JitsiMeetExternalAPI(domain, options);
-
-        // ── لما المستخدم يضغط hang up جوه Jitsi ──────────────
-        api.addEventListeners({
-            videoConferenceLeft: () => {
-                document.getElementById('leave-form').submit();
-            }
         });
 
-        // ── Copy room link + toast indicator ──────────────────
-        function copyRoomLink(event) {
-            const link = `${window.location.origin}/Meetings/Room/@Model.Id`;
+        api.addEventListeners({
+            videoConferenceLeft: () => handleLeave()
+        });
 
+        // ── Recording State ────────────────────────────────────────────────
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let displayStream = null;   // tab audio (remote participants)
+        let micStream = null;   // microphone (local user)
+        let audioCtx = null;   // Web Audio context for mixing
+
+        // ── Toggle Recording ──────────────────────────────────────────────
+        async function toggleRecording() {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                // ── Step 1: capture tab audio (remote participants) ──────────
+                // User sees browser picker → must select "This Tab" + enable "Share tab audio"
+                displayStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,          // required by spec — stopped immediately below
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        sampleRate: 44100
+                    }
+                });
+
+                // Kill video tracks right away — we don't need them
+                displayStream.getVideoTracks().forEach(t => t.stop());
+
+                const tabAudioTracks = displayStream.getAudioTracks();
+                if (tabAudioTracks.length === 0) {
+                    alert('No tab audio found.\n\nIn the browser picker please:\n1. Choose "This Tab"\n2. Enable "Share tab audio" checkbox');
+                    displayStream.getTracks().forEach(t => t.stop());
+                    displayStream = null;
+                    return;
+                }
+
+                // ── Step 2: capture microphone (local user) ──────────────────
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    },
+                    video: false
+                });
+
+                // ── Step 3: mix both sources with Web Audio API ───────────────
+                audioCtx = new AudioContext({ sampleRate: 44100 });
+                const destination = audioCtx.createMediaStreamDestination();
+
+                // Tab audio node
+                const tabSource = audioCtx.createMediaStreamSource(
+                    new MediaStream(tabAudioTracks)
+                );
+                tabSource.connect(destination);
+
+                // Mic node
+                const micSource = audioCtx.createMediaStreamSource(micStream);
+                micSource.connect(destination);
+
+                // destination.stream is the mixed audio stream
+                const mixedStream = destination.stream;
+
+                // ── Step 4: record the mixed stream ──────────────────────────
+                const mimeType = getSupportedMimeType();
+                audioChunks = [];
+
+                mediaRecorder = new MediaRecorder(mixedStream, { mimeType });
+
+                mediaRecorder.ondataavailable = e => {
+                    if (e.data && e.data.size > 0) audioChunks.push(e.data);
+                };
+                mediaRecorder.onstop = () => uploadRecording();
+
+                mediaRecorder.start(10_000);   // chunk every 10 s
+                isRecording = true;
+                setRecordingUI(true);
+
+                // Auto-stop if user dismisses the browser share bar
+                tabAudioTracks[0].onended = () => {
+                    if (isRecording) stopRecording();
+                };
+
+            } catch (err) {
+                // Clean up any streams that did open
+                displayStream?.getTracks().forEach(t => t.stop());
+                micStream?.getTracks().forEach(t => t.stop());
+                audioCtx?.close();
+                displayStream = micStream = audioCtx = null;
+
+                if (err.name === 'NotAllowedError') return; // user cancelled — silent
+                console.error('Recording error:', err);
+                alert('Could not start recording: ' + err.message);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            displayStream?.getTracks().forEach(t => t.stop());
+            micStream?.getTracks().forEach(t => t.stop());
+            audioCtx?.close();
+            displayStream = micStream = audioCtx = null;
+            isRecording = false;
+            setRecordingUI(false);
+        }
+
+        function getSupportedMimeType() {
+            const types = [
+                'audio/webm;codecs=opus',
+                'audio/webm',
+                'audio/ogg;codecs=opus',
+                'audio/ogg',
+                'audio/mp4',
+            ];
+            return types.find(t => MediaRecorder.isTypeSupported(t)) ?? '';
+        }
+
+        // ── Upload to server ──────────────────────────────────────────────
+        async function uploadRecording() {
+            if (audioChunks.length === 0) return;
+
+            const mimeType = mediaRecorder?.mimeType ?? 'audio/webm';
+            const extension = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
+            const blob = new Blob(audioChunks, { type: mimeType });
+            audioChunks = [];   // حرر الذاكرة فوراً
+
+            showUploadOverlay(true);
+            setUploadStatus('Uploading…', 10);
+
+            const formData = new FormData();
+            formData.append('audio', blob, `recording-${meetingId}.${extension}`);
+            formData.append('meetingId', meetingId);
+            formData.append('__RequestVerificationToken', antiForgeryToken);
+
+            try {
+                await uploadWithProgress(formData);
+                setUploadStatus('Done!', 100);
+                await delay(800);
+            } catch (err) {
+                console.error('Upload failed:', err);
+                setUploadStatus('Upload failed — saving locally as backup…', 100);
+                downloadLocally(blob, extension);  // fallback فقط لو السيرفر فشل
+                await delay(2000);
+            } finally {
+                showUploadOverlay(false);
+            }
+        }
+
+        function uploadWithProgress(formData) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `/Meetings/UploadRecording`);
+
+                xhr.upload.onprogress = e => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        setUploadStatus(`Uploading… ${pct}%`, pct);
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve();
+                    else reject(new Error(`Server returned ${xhr.status}`));
+                };
+
+                xhr.onerror = () => reject(new Error('Network error'));
+                xhr.send(formData);
+            });
+        }
+
+        // Local download fallback if server upload fails
+        function downloadLocally(blob, ext) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `meeting-recording.${ext}`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        }
+
+        // ── UI helpers ─────────────────────────────────────────────────────
+        function setRecordingUI(recording) {
+            const btn = document.getElementById('rec-btn');
+            const label = document.getElementById('rec-label');
+            const icon = document.getElementById('rec-icon');
+            const indicator = document.getElementById('rec-indicator');
+
+            if (!btn) return;
+
+            if (recording) {
+                btn.classList.add('border-red-500/50', 'text-red-400');
+                btn.classList.remove('border-surface-border', 'text-slate-400');
+                label.textContent = 'Stop';
+                icon.setAttribute('data-lucide', 'square');
+                indicator.classList.remove('hidden', 'bg-slate-500');
+                indicator.classList.add('bg-red-500');
+            } else {
+                btn.classList.remove('border-red-500/50', 'text-red-400');
+                btn.classList.add('border-surface-border', 'text-slate-400');
+                label.textContent = 'Record';
+                icon.setAttribute('data-lucide', 'mic');
+                indicator.classList.add('hidden');
+            }
+            lucide.createIcons();
+        }
+
+        function showUploadOverlay(show) {
+            document.getElementById('upload-overlay').classList.toggle('hidden', !show);
+        }
+
+        function setUploadStatus(msg, pct) {
+            document.getElementById('upload-status').textContent = msg;
+            document.getElementById('upload-bar-inner').style.width = pct + '%';
+        }
+
+        function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        // ── Leave / End helpers ────────────────────────────────────────────
+        async function handleLeave() {
+            await stopAndWaitForUpload();
+            document.getElementById('leave-form').submit();
+        }
+
+        async function handleEnd() {
+            await stopAndWaitForUpload();
+            document.getElementById('end-form').submit();
+        }
+
+        // يوقف التسجيل ويستنى الـ upload يخلص فعلاً قبل ما نروح
+        function stopAndWaitForUpload() {
+            return new Promise(resolve => {
+                if (!isRecording) { resolve(); return; }
+
+                // بنبدل onstop مؤقتاً عشان نعرف امتى الـ upload خلص
+                mediaRecorder.onstop = async () => {
+                    await uploadRecording();
+                    resolve();
+                };
+
+                stopRecording();
+            });
+        }
+
+        // ── Copy link ──────────────────────────────────────────────────────
+        function copyRoomLink(event) {
+            const link = `${window.location.origin}/Meetings/Room/${meetingId}`;
             navigator.clipboard.writeText(link).then(() => {
-                // Toast
                 const toast = document.getElementById('copy-toast');
                 toast.classList.add('show');
                 setTimeout(() => toast.classList.remove('show'), 2500);
 
-                // Button feedback
                 const btn = document.getElementById('copy-btn');
                 btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i> Copied!';
                 btn.classList.add('text-emerald-400', 'border-emerald-500/30');

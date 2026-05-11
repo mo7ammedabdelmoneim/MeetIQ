@@ -142,6 +142,34 @@
                             Due date cannot be in the past.
                         </span>
                     </div>
+
+                    <div class="mb-6">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                            Assign To
+                            <span class="normal-case font-normal text-slate-600 ml-1">(optional)</span>
+                        </label>
+
+                        <div class="relative">
+                            <i data-lucide="at-sign" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4
+                                         text-slate-500 pointer-events-none"></i>
+                            <input type="email"
+                                   name="AssigneeEmail"
+                                   value="@Model.AssigneeEmail"
+                                   placeholder="colleague@example.com"
+                                   class="w-full bg-surface border border-surface-border rounded-xl
+                      pl-9 pr-4 py-3 text-sm text-slate-300 placeholder-slate-600
+                      focus:outline-none focus:border-brand-600 focus:ring-1
+                      focus:ring-brand-600/30 transition-colors" />
+                        </div>
+
+                        <span asp-validation-for="AssigneeEmail" class="text-xs text-red-400 mt-1 block"></span>
+
+                        <!-- Info hint -->
+                        <p class="text-xs text-slate-600 mt-1.5 flex items-center gap-1.5">
+                            <i data-lucide="info" class="w-3 h-3 shrink-0"></i>
+                            Must be a registered user who is part of the selected meeting.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Meeting -->
@@ -193,91 +221,28 @@
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 
     <style>
-        #rte-editor:empty::before {
-            content: attr(data-placeholder);
-            color: #475569;
-            pointer-events: none;
-        }
-
-        #rte-editor a {
-            color: #5a8eff;
-        }
-
-        #rte-editor blockquote {
-            border-left: 3px solid #3366ff;
-            margin: 6px 0;
-            padding: 4px 0 4px 12px;
-            color: #94a3b8;
-        }
-
-        #rte-editor pre {
-            background: #0a0d14;
-            border: 1px solid #1f2637;
-            border-radius: 6px;
-            padding: 10px 14px;
-            color: #93c5fd;
-            font-family: 'DM Mono', monospace;
-            font-size: 13px;
-            overflow-x: auto;
-        }
-
-        #rte-editor h2 {
-            font-size: 17px;
-            font-weight: 600;
-            color: #e2e8f0;
-            margin: 6px 0 2px;
-        }
-
-        #rte-editor h3 {
-            font-size: 15px;
-            font-weight: 600;
-            color: #cbd5e1;
-            margin: 4px 0 2px;
-        }
-
-        #rte-editor ul, #rte-editor ol {
-            padding-left: 20px;
-            margin: 4px 0;
-        }
-
-        .rte-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px 7px;
-            border-radius: 6px;
-            color: #64748b;
-            font-size: 13px;
-            line-height: 1;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: background .15s, color .15s;
-        }
-
-            .rte-btn:hover, .rte-btn.active {
-                background: #1f2637;
-                color: #5a8eff;
-            }
-
-        /* ── Submit button disabled state ── */
-        #submitBtn:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
+        #rte-editor:empty::before { content: attr(data-placeholder); color: #475569; pointer-events: none; }
+        #rte-editor a { color: #5a8eff; }
+        #rte-editor blockquote { border-left: 3px solid #3366ff; margin: 6px 0; padding: 4px 0 4px 12px; color: #94a3b8; }
+        #rte-editor pre { background: #0a0d14; border: 1px solid #1f2637; border-radius: 6px; padding: 10px 14px; color: #93c5fd; font-family: 'DM Mono', monospace; font-size: 13px; overflow-x: auto; }
+        #rte-editor h2 { font-size: 17px; font-weight: 600; color: #e2e8f0; margin: 6px 0 2px; }
+        #rte-editor h3 { font-size: 15px; font-weight: 600; color: #cbd5e1; margin: 4px 0 2px; }
+        #rte-editor ul, #rte-editor ol { padding-left: 20px; margin: 4px 0; }
+        .rte-btn { background: none; border: none; cursor: pointer; padding: 5px 7px; border-radius: 6px; color: #64748b; font-size: 13px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+        .rte-btn:hover, .rte-btn.active { background: #1f2637; color: #5a8eff; }
+        #submitBtn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
     </style>
 
     <script>
         lucide.createIcons();
 
-        // ── RTE Setup ──
-        const editor = document.getElementById('rte-editor');
+        // ════════════════════════════════════════════════
+        //  RTE
+        // ════════════════════════════════════════════════
+        const editor  = document.getElementById('rte-editor');
         const toolbar = document.getElementById('rte-toolbar');
         const heading = document.getElementById('rte-heading');
 
@@ -298,7 +263,7 @@
             const url = prompt('Enter URL:');
             if (!url) return;
             const sel = window.getSelection();
-            if (sel && sel.toString().trim()) document.execCommand('createLink', false, url);
+            if (sel?.toString().trim()) document.execCommand('createLink', false, url);
             else document.execCommand('insertHTML', false, `<a href="${url}">${url}</a>`);
             editor.focus();
         });
@@ -308,12 +273,12 @@
             editor.focus();
         });
 
-        editor.addEventListener('keyup', syncActive);
+        editor.addEventListener('keyup',   syncActive);
         editor.addEventListener('mouseup', syncActive);
 
         function syncActive() {
             toolbar.querySelectorAll('[data-cmd]').forEach(btn => {
-                if (['bold', 'italic', 'underline', 'strikeThrough'].includes(btn.dataset.cmd))
+                if (['bold','italic','underline','strikeThrough'].includes(btn.dataset.cmd))
                     btn.classList.toggle('active', document.queryCommandState(btn.dataset.cmd));
             });
         }
@@ -325,54 +290,254 @@
 
         function syncDescription() {
             const html = editor.innerHTML;
-            document.getElementById('Description').value =
-                (html === '<br>' || html === '' || html === '<p><br></p>') ? '' : html;
+            const isEmpty = html === '' || html === '<br>' || html === '<p><br></p>';
+            document.getElementById('Description').value = isEmpty ? '' : html;
+            if (descTouched) validateDesc();
+            updateSubmit();
         }
 
         editor.addEventListener('input', syncDescription);
         editor.addEventListener('keyup', syncDescription);
 
-        // ── Due Date Validation ──
-        const dueDateInput = document.getElementById('DueDateInput');
-        const dueDateError = document.getElementById('due-date-error');
-        const submitBtn = document.getElementById('submitBtn');
+        // ════════════════════════════════════════════════
+        //  TOUCHED STATE  
+        // ════════════════════════════════════════════════
+        let titleTouched = false;
+        let dateTouched  = false;
+        let emailTouched = false;
+        let descTouched  = false;
 
-        function validateDueDate() {
-            if (!dueDateInput.value) {
-                resetDateState();
-                return true;
-            }
+        // ════════════════════════════════════════════════
+        //  FIELD HELPERS
+        // ════════════════════════════════════════════════
+        function setError(inputEl, errorEl, msg) {
+            if (!errorEl) return;
+            errorEl.textContent = msg;
+            errorEl.classList.remove('hidden');
+            inputEl?.classList.add('!border-red-500/50');
+            inputEl?.classList.remove('!border-emerald-500/30');
+        }
 
-            const [year, month, day] = dueDateInput.value.split('-').map(Number);
-            const selected = new Date(year, month - 1, day);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+        function clearError(inputEl, errorEl) {
+            if (!errorEl) return;
+            errorEl.textContent = '';
+            errorEl.classList.add('hidden');
+            inputEl?.classList.remove('!border-red-500/50');
+        }
 
-            if (selected < today) {
-                dueDateInput.style.borderColor = '#ef4444';
-                dueDateError.classList.remove('hidden');
-                submitBtn.disabled = true;
-                return false;
-            }
+        // ════════════════════════════════════════════════
+        //  TITLE  (required · min 3 · max 200)
+        // ════════════════════════════════════════════════
+        const titleInput = document.querySelector('input[name="Title"]');
+        const titleError = titleInput.nextElementSibling; // asp-validation-for span
 
-            resetDateState();
+        function isValidTitle() {
+            const v = titleInput.value.trim();
+            return v.length >= 3 && v.length <= 200;
+        }
+
+        function validateTitle() {
+            const v = titleInput.value.trim();
+            if (!v)             { setError(titleInput, titleError, 'Title is required'); return false; }
+            if (v.length < 3)   { setError(titleInput, titleError, 'Title must be at least 3 characters'); return false; }
+            if (v.length > 200) { setError(titleInput, titleError, 'Title cannot exceed 200 characters'); return false; }
+            clearError(titleInput, titleError);
             return true;
         }
 
-        function resetDateState() {
-            dueDateInput.style.borderColor = '';
-            dueDateError.classList.add('hidden');
-            submitBtn.disabled = false;
+        titleInput.addEventListener('input', () => {
+            if (titleTouched) validateTitle();
+            updateSubmit();
+        });
+
+        titleInput.addEventListener('blur', () => {
+            titleTouched = true;
+            validateTitle();
+            updateSubmit();
+        });
+
+        // ════════════════════════════════════════════════
+        //  DESCRIPTION  (max 3000)
+        // ════════════════════════════════════════════════
+        const descError = document.createElement('span');
+        descError.className = 'text-xs text-red-400 mt-1 hidden block';
+        editor.closest('.rounded-lg').insertAdjacentElement('afterend', descError);
+
+        function validateDesc() {
+            const len = (editor.innerText || '').length;
+            if (len > 3000) {
+                setError(null, descError, `Description too long (${len}/3000)`);
+                return false;
+            }
+            clearError(null, descError);
+            return true;
         }
 
-        dueDateInput.addEventListener('change', validateDueDate);
+        editor.addEventListener('blur', () => { descTouched = true; validateDesc(); updateSubmit(); });
 
-        document.querySelector('form').addEventListener('submit', function (e) {
-            syncDescription();
-            if (!validateDueDate()) {
-                e.preventDefault();
-                e.stopPropagation();
+        // ════════════════════════════════════════════════
+        //  DUE DATE  (today or future)
+        // ════════════════════════════════════════════════
+        const dueDateInput = document.getElementById('DueDateInput');
+        const dueDateError = document.getElementById('due-date-error');
+        dueDateError.textContent = 'Due date must be today or in the future.';
+
+        function isValidDate() {
+            if (!dueDateInput.value) return true;
+            const [y, m, d] = dueDateInput.value.split('-').map(Number);
+            const sel   = new Date(y, m - 1, d);
+            const today = new Date(); today.setHours(0,0,0,0);
+            return sel >= today;
+        }
+
+        function validateDate() {
+            if (!isValidDate()) {
+                setError(dueDateInput, dueDateError, 'Due date must be today or in the future.');
+                return false;
             }
+            clearError(dueDateInput, dueDateError);
+            return true;
+        }
+
+        dueDateInput.addEventListener('change', () => {
+            dateTouched = true;
+            validateDate();
+            updateSubmit();
         });
+
+        // ════════════════════════════════════════════════
+        //  ASSIGNEE EMAIL  (optional · format · meeting · server check)
+        // ════════════════════════════════════════════════
+        const emailInput    = document.querySelector('input[name="AssigneeEmail"]');
+        const emailError    = emailInput.nextElementSibling;
+        const meetingSelect = document.querySelector('select[name="MeetingId"]');
+        const EMAIL_RE = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+
+        let emailServerValid = true;   // assume valid when empty
+        let emailCheckTimer  = null;
+        let emailChecking    = false;
+
+        // Spinner indicator
+        const emailSpinner = document.createElement('span');
+        emailSpinner.className = 'absolute right-3 top-1/2 -translate-y-1/2 hidden';
+        emailSpinner.innerHTML = `<svg class="animate-spin w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>`;
+        emailInput.parentElement.appendChild(emailSpinner);
+
+        function isEmailFormatValid() {
+            const v = emailInput.value.trim();
+            return !v || EMAIL_RE.test(v);
+        }
+
+        function validateEmailLocal() {
+            const v = emailInput.value.trim();
+
+            if (!v) { clearError(emailInput, emailError); emailServerValid = true; return true; }
+
+            if (!EMAIL_RE.test(v)) {
+                setError(emailInput, emailError, 'Invalid email format.');
+                emailServerValid = false;
+                return false;
+            }
+
+            if (meetingSelect && !meetingSelect.value) {
+                setError(emailInput, emailError,
+                    'Please select a meeting first — assignment is meeting-scoped.');
+                emailServerValid = false;
+                return false;
+            }
+
+            return true; // format ok, needs server check
+        }
+
+        async function checkEmailServer() {
+            const email     = emailInput.value.trim();
+            const meetingId = meetingSelect?.value;
+
+            if (!email || !meetingId) return;
+
+            emailChecking = true;
+            emailSpinner.classList.remove('hidden');
+
+            try {
+                const res  = await fetch(
+                    `/Tasks/ValidateAssignee?email=${encodeURIComponent(email)}&meetingId=${meetingId}`);
+                const data = await res.json();
+
+                emailServerValid = data.valid;
+
+                if (data.valid) {
+                    clearError(emailInput, emailError);
+                } else {
+                    setError(emailInput, emailError, data.message);
+                }
+            } catch {
+                emailServerValid = true; // server error → let server handle it
+            } finally {
+                emailChecking = false;
+                emailSpinner.classList.add('hidden');
+                updateSubmit();
+            }
+        }
+
+        function triggerEmailCheck() {
+            clearTimeout(emailCheckTimer);
+            const localOk = validateEmailLocal();
+
+            if (!localOk) { emailServerValid = false; updateSubmit(); return; }
+
+            const v = emailInput.value.trim();
+            if (!v) { emailServerValid = true; updateSubmit(); return; }
+
+            // Debounce server check 600ms
+            emailCheckTimer = setTimeout(checkEmailServer, 600);
+        }
+
+        emailInput.addEventListener('input', () => {
+            emailTouched = true;
+            triggerEmailCheck();
+            updateSubmit();
+        });
+
+        emailInput.addEventListener('blur', () => {
+            emailTouched = true;
+            triggerEmailCheck();
+        });
+
+        meetingSelect?.addEventListener('change', () => {
+            if (emailTouched && emailInput.value.trim())
+                triggerEmailCheck();
+            updateSubmit();
+        });
+
+        // ════════════════════════════════════════════════
+        //  SUBMIT GATE
+        // ════════════════════════════════════════════════
+        const submitBtn = document.getElementById('submitBtn');
+
+        function updateSubmit() {
+            const ok = isValidTitle()
+                    && isValidDate()
+                    && isEmailFormatValid()
+                    && emailServerValid
+                    && !emailChecking
+                    && (editor.innerText || '').length <= 3000;
+
+            submitBtn.disabled = !ok;
+        }
+
+        document.querySelector('form').addEventListener('submit', e => {
+            // Force-touch all fields on submit
+            titleTouched = dateTouched = emailTouched = true;
+
+            syncDescription();
+
+            const ok = validateTitle() && validateDate() && validateEmailLocal() && emailServerValid;
+            if (!ok) { e.preventDefault(); e.stopPropagation(); }
+        });
+
+        // ── Initial state — button disabled, no errors shown ──
+        updateSubmit();
     </script>
 }

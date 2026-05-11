@@ -1,5 +1,6 @@
 ﻿using Hangfire;
 using Hangfire.SqlServer;
+using MeetIQ.Application.Features.Tasks.Services;
 using MeetIQ.Application.Interfaces;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Application.Interfaces.Services;
@@ -107,7 +108,8 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<IJitsiTokenService, JitsiTokenService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFileStorageService, LocalFileStorageService>();
-
+            services.AddScoped<IRecordingService, RecordingService>();
+            services.AddScoped<ITaskAssignmentValidator, TaskAssignmentValidator>();
 
 
 

@@ -20,14 +20,17 @@ namespace MeetIQ.Application.Features.Tasks.Commands.CreateTaskCommand
                 .When(x => x.DueDate.HasValue)
                 .WithMessage("DueDate must be today or in the future");
 
-
-
             RuleFor(x => x.Priority)
                 .IsInEnum()
                 .WithMessage("Invalid priority value");
 
             RuleFor(x => x.UserId)
                 .NotEmpty().WithMessage("UserId is required");
+
+            RuleFor(x => x.AssigneeEmail)
+                .EmailAddress().WithMessage("Invalid email format")
+                .When(x => !string.IsNullOrEmpty(x.AssigneeEmail));
+
         }
     }
 }

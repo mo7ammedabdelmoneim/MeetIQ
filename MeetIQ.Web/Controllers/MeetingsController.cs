@@ -17,7 +17,6 @@ using MeetIQ.Application.Features.Meetings.Commands.InviteUserCommand;
 using MeetIQ.Application.Features.Meetings.Commands.RespondToInvitationCommand;
 using MeetIQ.Application.Features.Meetings.Commands.RevokeInvitationCommand;
 using MeetIQ.Application.Features.Meetings.Queries.SearchUsersToInviteQuery;
-using MeetIQ.Infrastructure.Persistence.Repositories;
 using MeetIQ.Application.Features.Meetings.Queries.GetUserPendingInvitationsQuery;
 
 namespace MeetIQ.Web.Controllers
@@ -27,11 +26,13 @@ namespace MeetIQ.Web.Controllers
     {
         private readonly IMediator mediator;
         private readonly IJitsiTokenService jitsiTokenService;
+        private readonly IRecordingService recordingService;
 
-        public MeetingsController(IMediator mediator, IJitsiTokenService jitsiTokenService)
+        public MeetingsController(IMediator mediator, IJitsiTokenService jitsiTokenService, IRecordingService recordingService)
         {
             this.mediator = mediator;
             this.jitsiTokenService = jitsiTokenService;
+            this.recordingService = recordingService;
         }
 
         private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
@@ -136,6 +137,29 @@ namespace MeetIQ.Web.Controllers
 
             TempData["Success"] = "Meeting cancelled.";
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(500 * 1024 * 1024)]          // 500 MB max
+        [RequestFormLimits(MultipartBodyLengthLimit = 500 * 1024 * 1024)]
+        public async Task<IActionResult> UploadRecording( IFormFile audio, Guid meetingId, CancellationToken ct)
+        {
+            if (audio == null || audio.Length == 0)
+                return BadRequest("No audio file received.");
+
+            var meeting = await mediator.Send(new GetMeetingByIdQuery { MeetingId = meetingId }, ct);
+            if (meeting == null)
+                return NotFound();
+
+            // Only host or participants can upload
+            if (meeting.HostId != CurrentUserId &&
+                !meeting.Participants.Any(p => p.UserId == CurrentUserId))
+                return Forbid();
+
+            await recordingService.SaveAsync(meetingId, audio, ct);
+
+            return Ok(new { message = "Recording saved." });
         }
 
 

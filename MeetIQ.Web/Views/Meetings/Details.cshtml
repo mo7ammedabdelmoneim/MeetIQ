@@ -246,8 +246,11 @@
         </div>
     }
 
-    <!-- Invite Panel -->
-    @await Html.PartialAsync("_InvitePanel", Model)
+    @if (isHost)
+    {
+        <!-- Invite Panel -->
+        @await Html.PartialAsync("_InvitePanel", Model)
+    }
 
 </div>
 

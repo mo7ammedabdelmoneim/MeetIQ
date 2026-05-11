@@ -1,49 +1,61 @@
 ﻿using MediatR;
 using MeetIQ.Application.Common.Exceptions;
+using MeetIQ.Application.Features.Tasks.Services;
 using MeetIQ.Application.Interfaces.Repositories;
 
 namespace MeetIQ.Application.Features.Tasks.Commands.UpdateTaskCommand
 {
-    public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, Unit>
+    public class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand, bool>
     {
         private readonly ITaskRepository taskRepository;
-        private readonly IUserRepository userRepository;
+        private readonly ITaskAssignmentValidator assignmentValidator;
 
         public UpdateTaskCommandHandler(
             ITaskRepository taskRepository,
-            IUserRepository userRepository)
+            ITaskAssignmentValidator assignmentValidator)
         {
             this.taskRepository = taskRepository;
-            this.userRepository = userRepository;
+            this.assignmentValidator = assignmentValidator;
         }
 
-        public async Task<Unit> Handle(UpdateTaskCommand request, CancellationToken cancellationToken)
+        public async Task<bool> Handle(
+            UpdateTaskCommand request,
+            CancellationToken cancellationToken)
         {
-            var task = await taskRepository.GetAsync(x => x.Id == request.Id);
+            var task = await taskRepository.GetAsync(
+                x => x.Id == request.TaskId && !x.IsDeleted);
 
             if (task == null)
                 throw new NotFoundException("Task not found");
 
-            // Partial update
-            if (request.Title != null)
-                task.Title = request.Title;
+            // Only creator or assignee can update
+            if (task.UserId != request.RequesterId &&
+                task.AssigneeId != request.RequesterId)
+                throw new UnauthorizedException("You don't have permission to update this task");
 
-            if (request.Description is not null)
-                task.Description = string.IsNullOrWhiteSpace(request.Description) ? null: request.Description;
+            task.Title = request.Title;
+            task.Description = request.Description;
+            task.Priority = request.Priority;
+            task.Status = request.Status;
+            task.DueDate = request.DueDate;
 
-            if (request.Priority.HasValue)
-                task.Priority = request.Priority.Value;
-
-            if (request.DueDate.HasValue)
-                task.DueDate = request.DueDate;
-            
-            if (request.MeetingId.HasValue)
-                task.MeetingId = request.MeetingId;
+            // Assignee 
+            if (request.ClearAssignee)
+            {
+                task.AssigneeId = null;
+            }
+            else if (!string.IsNullOrEmpty(request.AssigneeEmail))
+            {
+                task.AssigneeId = await assignmentValidator.ValidateAndResolveAsync(
+                    request.AssigneeEmail,
+                    task.MeetingId,
+                    request.RequesterId);
+            }
 
             taskRepository.Update(task);
             await taskRepository.SaveChangesAsync();
 
-            return Unit.Value;
+            return true;
         }
     }
 }

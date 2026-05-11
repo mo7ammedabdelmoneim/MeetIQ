@@ -44,6 +44,12 @@ namespace MeetIQ.Web
                     options.Scope.Add("profile");
                 });
 
+            // Kestrel Configuration
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Limits.MaxRequestBodySize = 500 * 1024 * 1024; // 500 MB
+            });
+
             builder.Services.AddScoped<TaskDueSoonJob>();
             builder.Services.AddScoped<TaskOverdueJob>();
             builder.Services.AddScoped<MeetingStartingSoonJob>();

@@ -17,5 +17,10 @@ namespace MeetIQ.Web.ViewModels.Tasks
 
         public List<MeetingSelectDto> Meetings { get; set; } = new();
 
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [Display(Name = "Assign to (email)")]
+        public string? AssigneeEmail { get; set; }
+
+
     }
 }
