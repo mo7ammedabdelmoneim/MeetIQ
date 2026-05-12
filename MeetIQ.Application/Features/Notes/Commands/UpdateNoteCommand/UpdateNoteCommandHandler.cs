@@ -24,7 +24,6 @@ namespace MeetIQ.Application.Features.Notes.Commands.UpdateNoteCommand
 
             if (note.AuthorId != request.RequesterId)
                 throw new BadRequestException("You are not allowed to edit this note");
-            // throw new ForbiddenException("You are not allowed to edit this note");
 
             note.Title = request.Title;
             note.Content = request.Content;

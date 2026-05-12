@@ -1,14 +1,8 @@
 ﻿using FluentValidation;
 using MediatR;
 using MeetIQ.Application.Common.Behaviors;
-using MeetIQ.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MeetIQ.Application.DependencyInjection
 {
@@ -27,11 +21,7 @@ namespace MeetIQ.Application.DependencyInjection
             // Register TransactionBehavior
             services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
 
-            // Mapping
-            services.AddAutoMapper(typeof(Meeting).Assembly);
             return services;
-
-
         }
     }
 }

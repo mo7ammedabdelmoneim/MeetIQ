@@ -68,7 +68,7 @@ namespace MeetIQ.Web.Controllers
                 FilterType = filter ?? "all",
                 AllTags = result.AllTags,
                 TotalCount = result.Total,
-                CurrentPage = page           // ← جديد
+                CurrentPage = page           
             };
 
             ViewData["Title"] = "Notes";
@@ -80,7 +80,6 @@ namespace MeetIQ.Web.Controllers
             return View(vm);
         }
 
-        // DETAILS 
         [HttpGet]
         public async Task<IActionResult> Details(Guid id)
         {
@@ -112,7 +111,6 @@ namespace MeetIQ.Web.Controllers
             return View(vm);
         }
 
-        // CREATE GET 
         [HttpGet]
         public async Task<IActionResult> Create(Guid? meetingId, Guid? calendarEventId)
         {
@@ -124,7 +122,6 @@ namespace MeetIQ.Web.Controllers
             return View(vm);
         }
 
-        // CREATE POST 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(NoteCreateViewModel model)
         {
@@ -152,7 +149,6 @@ namespace MeetIQ.Web.Controllers
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        // EDIT GET 
         [HttpGet]
         public async Task<IActionResult> Edit(Guid id)
         {
@@ -182,7 +178,6 @@ namespace MeetIQ.Web.Controllers
             return View(vm);
         }
 
-        // EDIT POST 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(NoteEditViewModel model)
         {
@@ -210,7 +205,6 @@ namespace MeetIQ.Web.Controllers
             return RedirectToAction(nameof(Details), new { id = model.Id });
         }
 
-        // DELETE POST 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -224,8 +218,8 @@ namespace MeetIQ.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // PRIVATE HELPERS 
 
+        // PRIVATE HELPERS 
         private async Task<NoteCreateViewModel> BuildCreateViewModelAsync()
         {
             var (meetings, events, tags) = await FetchDropdownDataAsync();

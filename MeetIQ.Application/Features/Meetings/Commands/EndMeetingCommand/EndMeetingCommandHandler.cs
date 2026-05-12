@@ -1,8 +1,10 @@
 ﻿using MediatR;
 using MeetIQ.Application.Common.Exceptions;
+using MeetIQ.Application.Features.Meetings.Hubs;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Application.Services;
 using MeetIQ.Domain.Enums;
+using Microsoft.AspNetCore.SignalR;
 
 namespace MeetIQ.Application.Features.Meetings.Commands.EndMeetingCommand
 {
@@ -10,11 +12,13 @@ namespace MeetIQ.Application.Features.Meetings.Commands.EndMeetingCommand
     {
         private readonly IMeetingRepository meetingRepository;
         private readonly INotificationService notificationService;
+        private readonly IHubContext<MeetingHub> hubContext;
 
-        public EndMeetingCommandHandler(IMeetingRepository meetingRepository, INotificationService notificationService)
+        public EndMeetingCommandHandler(IMeetingRepository meetingRepository, INotificationService notificationService, IHubContext<MeetingHub> hubContext)
         {
             this.meetingRepository = meetingRepository;
             this.notificationService = notificationService;
+            this.hubContext = hubContext;
         }
 
         public async Task<bool> Handle(
@@ -41,6 +45,10 @@ namespace MeetIQ.Application.Features.Meetings.Commands.EndMeetingCommand
             await meetingRepository.MarkAllParticipantsLeftAsync(request.MeetingId, endedAt);
 
             await meetingRepository.SaveChangesAsync();
+
+            await hubContext.Clients
+                    .Group($"meeting-{meeting.Id}")
+                    .SendAsync("MeetingEnded");
 
             var invitedUserIds = await meetingRepository.GetInvitedUserIdsAsync(request.MeetingId);
 

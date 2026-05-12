@@ -1,5 +1,4 @@
-﻿
-namespace MeetIQ.Application.Common.Exceptions
+﻿namespace MeetIQ.Application.Common.Exceptions
 {
     public class UnauthorizedException : Exception
     {

@@ -1,5 +1,4 @@
-﻿using MediatR;
-using MeetIQ.Application.Interfaces;
+﻿using MeetIQ.Application.Interfaces;
 
 namespace MeetIQ.Application.Features.Calendar.Commands.CreateCalendarEventCommand
 {

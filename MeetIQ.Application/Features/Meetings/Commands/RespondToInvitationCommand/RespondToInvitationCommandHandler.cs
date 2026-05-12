@@ -11,7 +11,7 @@ namespace MeetIQ.Application.Features.Meetings.Commands.RespondToInvitationComma
     {
         private readonly IMeetingRepository meetingRepository;
         private readonly IUserRepository userRepository;
-        private readonly INotificationService notificationService;   // ✅
+        private readonly INotificationService notificationService;   
 
         public RespondToInvitationCommandHandler(
             IMeetingRepository meetingRepository,

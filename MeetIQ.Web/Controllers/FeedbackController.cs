@@ -18,7 +18,6 @@ namespace MeetIQ.Web.Controllers
             this.mediator = mediator;
         }
 
-        // GET /Feedback/Create
         [HttpGet]
         public IActionResult Create()
         {
@@ -26,7 +25,6 @@ namespace MeetIQ.Web.Controllers
             return View(new CreateFeedbackViewModel());
         }
 
-        // POST /Feedback/Create
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateFeedbackViewModel model)
         {
@@ -49,7 +47,6 @@ namespace MeetIQ.Web.Controllers
             return RedirectToAction(nameof(My));
         }
 
-        // GET /Feedback/My
         [HttpGet]
         public async Task<IActionResult> My(int page = 1)
         {

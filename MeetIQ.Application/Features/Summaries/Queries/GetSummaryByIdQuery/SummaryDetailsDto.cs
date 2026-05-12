@@ -8,7 +8,7 @@
         public string HostId { get; set; } = string.Empty;
         public string SummaryText { get; set; } = string.Empty;
         public string? KeyInsights { get; set; }
-        public string? KeyDecisions { get; set; }   // JSON array string
+        public string? KeyDecisions { get; set; }  
         public bool IsEdited { get; set; }
         public DateTime GeneratedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

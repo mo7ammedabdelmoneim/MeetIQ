@@ -16,6 +16,5 @@ namespace MeetIQ.Application.Interfaces.Repositories
         Task<List<TaskDueDto>> GetTasksDueBetweenAsync(DateTime from, DateTime to);
         Task<List<TaskDueDto>> GetOverdueTasksAsync();
         Task<bool> WasNotifiedRecentlyAsync(Guid taskId, NotificationType type, int withinHours);
-
     }
 }

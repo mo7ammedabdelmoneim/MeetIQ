@@ -1,7 +1,6 @@
 ﻿using MeetIQ.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using static Dapper.SqlMapper;
 
 namespace MeetIQ.Infrastructure.Persistence.Configurations
 {

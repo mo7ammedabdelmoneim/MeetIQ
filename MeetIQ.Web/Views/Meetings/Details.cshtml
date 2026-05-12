@@ -1,6 +1,4 @@
-﻿@using MeetIQ.Application.Features.Meetings.DTOs
-@using MeetIQ.Domain.Enums
-@model MeetingDetailsDto
+﻿@model MeetingDetailsDto
 
 @{
     ViewData["Title"] = Model.Title;
@@ -78,7 +76,7 @@
         <div class="text-center">
             <p class="text-white font-semibold text-sm">Analyzing with AI…</p>
             <p class="text-slate-500 text-xs mt-1.5 leading-relaxed">
-                Groq is generating your summary,<br/>tasks, and notes.
+                generating your summary,<br/>tasks, and notes.
             </p>
         </div>
 
@@ -310,18 +308,15 @@
                 </a>
                 @if (!Model.HasSummary && isHost)
                 {
-                    <form id="analyze-form" asp-action="Analyze" method="post"
-                          onsubmit="showOverlay('analyze-overlay'); startAnalyzeSteps()">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="meetingId" value="@Model.Id" />
-                        <button type="submit"
-                                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg
+                    <button type="button"
+                            onclick="startAnalysis()"
+                            class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg
                                        bg-violet-600/20 hover:bg-violet-600/30 border border-violet-600/30
                                        text-violet-400 text-xs font-semibold transition-colors">
-                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                            Analyze Meeting
-                        </button>
-                    </form>
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        Analyze Meeting
+                    </button>
+
                 }
             }
             else if (transcriptRunning)
@@ -456,7 +451,10 @@
     {
         @await Html.PartialAsync("_InvitePanel", Model)
     }
+
+
 </div>
+    @await Html.PartialAsync("_AnalysisReviewModal")
 
 @section Scripts {
     <style>
@@ -651,5 +649,464 @@
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
+
+
+        // ══════════════════════════════════════════════════════════
+        //  STATE
+        // ══════════════════════════════════════════════════════════
+        let _preview = null;   // raw AnalysisPreviewDto from server
+        let _tasks = [];     // { ...PreviewTaskDto, approved: bool, editing: bool }
+        let _notes = [];     // { ...PreviewNoteDto, approved: bool, editing: bool }
+        let _activeTab = 'tasks';
+
+        // ══════════════════════════════════════════════════════════
+        //  ENTRY — replaces the old Analyze form submit
+        //  Wire the "Analyze Meeting" button to this instead of a
+        //  normal form POST. Change the button to:
+        //      <button type="button" onclick="startAnalysis()">
+        // ══════════════════════════════════════════════════════════
+        async function startAnalysis() {
+            showOverlay('analyze-overlay');
+            startAnalyzeSteps();
+
+            try {
+                const formData = new FormData();
+                formData.append('meetingId', MEETING_ID);
+                formData.append('__RequestVerificationToken', CSRF_TOKEN);
+
+                const res = await fetch('/Meetings/PreviewAnalysis', {
+                    method: 'POST', body: formData
+                });
+                const data = await res.json();
+
+                document.getElementById('analyze-overlay')?.classList.add('hidden');
+
+                if (!data.success) {
+                    showToast(data.error ?? 'Analysis failed.', 'error');
+                    return;
+                }
+
+                openReviewModal(data.preview);
+
+            } catch (err) {
+                document.getElementById('analyze-overlay')?.classList.add('hidden');
+                showToast('Network error. Please try again.', 'error');
+                console.error(err);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  OPEN / CLOSE MODAL
+        // ══════════════════════════════════════════════════════════
+        function openReviewModal(preview) {
+            _preview = preview;
+
+            _tasks = (preview.tasks ?? []).map((t, i) => ({
+                ...t, tempId: i, approved: true, editing: false
+            }));
+            _notes = (preview.notes ?? []).map((n, i) => ({
+                ...n, tempId: i, approved: true, editing: false
+            }));
+
+            renderTasks();
+            renderNotes();
+            updateCounts();
+
+            const modal = document.getElementById('review-modal');
+            const inner = document.getElementById('review-modal-inner');
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                inner.classList.remove('scale-95', 'opacity-0');
+                inner.classList.add('scale-100', 'opacity-100');
+            });
+
+            lucide.createIcons();
+        }
+
+        function closeReviewModal() {
+            const modal = document.getElementById('review-modal');
+            const inner = document.getElementById('review-modal-inner');
+            inner.classList.add('scale-95', 'opacity-0');
+            inner.classList.remove('scale-100', 'opacity-100');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  TABS
+        // ══════════════════════════════════════════════════════════
+        function switchTab(tab) {
+            _activeTab = tab;
+
+            ['tasks', 'notes'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const panel = document.getElementById(`panel-${t}`);
+                if (t === tab) {
+                    btn.classList.add('border-violet-500', 'text-violet-400');
+                    btn.classList.remove('border-transparent', 'text-slate-500');
+                    panel.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('border-violet-500', 'text-violet-400');
+                    btn.classList.add('border-transparent', 'text-slate-500');
+                    panel.classList.add('hidden');
+                }
+            });
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  RENDER
+        // ══════════════════════════════════════════════════════════
+        const PRIORITY_COLOR = {
+            high: 'text-red-400 bg-red-400/10 border-red-400/20',
+            medium: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
+            low: 'text-slate-400 bg-slate-400/10 border-slate-400/20',
+        };
+
+        function renderTasks() {
+            const el = document.getElementById('panel-tasks');
+            if (!_tasks.length) {
+                el.innerHTML = emptyState('No tasks extracted from this meeting.');
+                return;
+            }
+            el.innerHTML = _tasks.map(t => taskCard(t)).join('');
+            lucide.createIcons();
+            // wire edit/save buttons
+            _tasks.forEach(t => wireCard('task', t.tempId));
+        }
+
+        function renderNotes() {
+            const el = document.getElementById('panel-notes');
+            if (!_notes.length) {
+                el.innerHTML = emptyState('No notes extracted from this meeting.');
+                return;
+            }
+            el.innerHTML = _notes.map(n => noteCard(n)).join('');
+            lucide.createIcons();
+            _notes.forEach(n => wireCard('note', n.tempId));
+        }
+
+        function taskCard(t) {
+            const pc = PRIORITY_COLOR[t.priority?.toLowerCase()] ?? PRIORITY_COLOR.low;
+            const faded = t.approved ? '' : 'opacity-40';
+            return `
+                    <div id="task-card-${t.tempId}"
+                         class="group relative rounded-xl border transition-all duration-150
+                                ${t.approved
+                    ? 'bg-surface border-surface-border'
+                    : 'bg-surface/50 border-surface-border/50'} ${faded}">
+
+                        <!-- View mode -->
+                        <div id="task-view-${t.tempId}" class="p-4">
+                            <div class="flex items-start gap-3">
+                                <!-- Approve toggle -->
+                                <button onclick="toggleApprove('task', ${t.tempId})"
+                                        class="mt-0.5 w-5 h-5 rounded-md border-2 shrink-0 transition-colors flex items-center justify-center
+                                               ${t.approved
+                    ? 'bg-violet-600 border-violet-600'
+                    : 'border-surface-border bg-transparent'}">
+                                    ${t.approved
+                    ? `<i data-lucide="check" class="w-3 h-3 text-white"></i>`
+                    : ''}
+                                </button>
+
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <p class="text-sm font-medium text-white truncate">${escapeHtml(t.title)}</p>
+                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border ${pc}">
+                                            ${escapeHtml(t.priority ?? 'Low')}
+                                        </span>
+                                        ${t.dueDate ? `<span class="text-[10px] text-slate-500 flex items-center gap-1">
+                                            <i data-lucide="calendar" class="w-3 h-3"></i>${escapeHtml(t.dueDate)}
+                                        </span>` : ''}
+                                    </div>
+                                    <p class="text-xs text-slate-500 leading-relaxed line-clamp-2">
+                                        ${escapeHtml(t.description)}
+                                    </p>
+                                </div>
+
+                                <!-- Edit btn -->
+                                <button id="task-edit-btn-${t.tempId}"
+                                        onclick="startEdit('task', ${t.tempId})"
+                                        class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity
+                                               text-slate-600 hover:text-slate-300 p-1 rounded-lg hover:bg-surface-hover">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Edit mode (hidden) -->
+                        <div id="task-edit-${t.tempId}" class="hidden p-4 space-y-3">
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Title</label>
+                                <input id="task-title-${t.tempId}" value="${escapeHtml(t.title)}"
+                                       class="w-full bg-surface border border-surface-border rounded-lg px-3 py-1.5
+                                              text-sm text-white focus:outline-none focus:border-violet-500/50 transition-colors"/>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Description</label>
+                                <textarea id="task-desc-${t.tempId}" rows="2"
+                                          class="w-full bg-surface border border-surface-border rounded-lg px-3 py-1.5
+                                                 text-xs text-slate-300 focus:outline-none focus:border-violet-500/50
+                                                 transition-colors resize-none leading-relaxed">${escapeHtml(t.description)}</textarea>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1">
+                                    <label class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Priority</label>
+                                    <select id="task-priority-${t.tempId}"
+                                            class="w-full bg-surface border border-surface-border rounded-lg px-3 py-1.5
+                                                   text-xs text-white focus:outline-none focus:border-violet-500/50 transition-colors">
+                                        ${['High', 'Medium', 'Low'].map(p =>
+                        `<option value="${p}" ${t.priority === p ? 'selected' : ''}>${p}</option>`
+                    ).join('')}
+                                    </select>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Due Date</label>
+                                    <input id="task-due-${t.tempId}" type="date" value="${t.dueDate ?? ''}"
+                                           class="w-full bg-surface border border-surface-border rounded-lg px-3 py-1.5
+                                                  text-xs text-white focus:outline-none focus:border-violet-500/50 transition-colors"/>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 justify-end">
+                                <button onclick="cancelEdit('task', ${t.tempId})"
+                                        class="px-3 py-1.5 rounded-lg text-xs text-slate-500
+                                               hover:text-slate-300 border border-surface-border transition-colors">
+                                    Cancel
+                                </button>
+                                <button onclick="saveEdit('task', ${t.tempId})"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold
+                                               bg-violet-600 hover:bg-violet-500 text-white transition-colors">
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+        }
+
+        function noteCard(n) {
+            const faded = n.approved ? '' : 'opacity-40';
+            return `
+                    <div id="note-card-${n.tempId}"
+                         class="group relative rounded-xl border transition-all duration-150
+                                ${n.approved
+                    ? 'bg-surface border-surface-border'
+                    : 'bg-surface/50 border-surface-border/50'} ${faded}">
+
+                        <!-- View mode -->
+                        <div id="note-view-${n.tempId}" class="p-4">
+                            <div class="flex items-start gap-3">
+                                <button onclick="toggleApprove('note', ${n.tempId})"
+                                        class="mt-0.5 w-5 h-5 rounded-md border-2 shrink-0 transition-colors flex items-center justify-center
+                                               ${n.approved
+                    ? 'bg-violet-600 border-violet-600'
+                    : 'border-surface-border bg-transparent'}">
+                                    ${n.approved
+                    ? `<i data-lucide="check" class="w-3 h-3 text-white"></i>`
+                    : ''}
+                                </button>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-white mb-1">${escapeHtml(n.title)}</p>
+                                    <p class="text-xs text-slate-500 leading-relaxed line-clamp-2">${escapeHtml(n.content)}</p>
+                                </div>
+                                <button id="note-edit-btn-${n.tempId}"
+                                        onclick="startEdit('note', ${n.tempId})"
+                                        class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity
+                                               text-slate-600 hover:text-slate-300 p-1 rounded-lg hover:bg-surface-hover">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Edit mode -->
+                        <div id="note-edit-${n.tempId}" class="hidden p-4 space-y-3">
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Title</label>
+                                <input id="note-title-${n.tempId}" value="${escapeHtml(n.title)}"
+                                       class="w-full bg-surface border border-surface-border rounded-lg px-3 py-1.5
+                                              text-sm text-white focus:outline-none focus:border-violet-500/50 transition-colors"/>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Content</label>
+                                <textarea id="note-content-${n.tempId}" rows="3"
+                                          class="w-full bg-surface border border-surface-border rounded-lg px-3 py-1.5
+                                                 text-xs text-slate-300 focus:outline-none focus:border-violet-500/50
+                                                 transition-colors resize-none leading-relaxed">${escapeHtml(n.content)}</textarea>
+                            </div>
+                            <div class="flex gap-2 justify-end">
+                                <button onclick="cancelEdit('note', ${n.tempId})"
+                                        class="px-3 py-1.5 rounded-lg text-xs text-slate-500
+                                               hover:text-slate-300 border border-surface-border transition-colors">
+                                    Cancel
+                                </button>
+                                <button onclick="saveEdit('note', ${n.tempId})"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold
+                                               bg-violet-600 hover:bg-violet-500 text-white transition-colors">
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+        }
+
+        function emptyState(msg) {
+            return `<div class="flex flex-col items-center gap-2 py-10 text-center">
+                        <i data-lucide="inbox" class="w-8 h-8 text-slate-700"></i>
+                        <p class="text-sm text-slate-600">${msg}</p>
+                    </div>`;
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  WIRE CARD INTERACTIONS (after render)
+        // ══════════════════════════════════════════════════════════
+        function wireCard(type, id) {
+            // nothing extra needed — buttons use inline onclick
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  APPROVE / REJECT
+        // ══════════════════════════════════════════════════════════
+        function toggleApprove(type, id) {
+            const arr = type === 'task' ? _tasks : _notes;
+            const item = arr.find(x => x.tempId === id);
+            if (!item) return;
+
+            item.approved = !item.approved;
+
+            // re-render just this card
+            const panel = document.getElementById(`panel-${type}s`);
+            const card = document.getElementById(`${type}-card-${id}`);
+            if (!card) return;
+
+            const tmp = document.createElement('div');
+            tmp.innerHTML = type === 'task' ? taskCard(item) : noteCard(item);
+            card.replaceWith(tmp.firstElementChild);
+            lucide.createIcons();
+            wireCard(type, id);
+            updateCounts();
+        }
+
+        function selectAll(approve) {
+            _tasks.forEach(t => t.approved = approve);
+            _notes.forEach(n => n.approved = approve);
+            renderTasks();
+            renderNotes();
+            updateCounts();
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  INLINE EDIT
+        // ══════════════════════════════════════════════════════════
+        function startEdit(type, id) {
+            document.getElementById(`${type}-view-${id}`)?.classList.add('hidden');
+            document.getElementById(`${type}-edit-${id}`)?.classList.remove('hidden');
+        }
+
+        function cancelEdit(type, id) {
+            document.getElementById(`${type}-edit-${id}`)?.classList.add('hidden');
+            document.getElementById(`${type}-view-${id}`)?.classList.remove('hidden');
+        }
+
+        function saveEdit(type, id) {
+            if (type === 'task') {
+                const item = _tasks.find(t => t.tempId === id);
+                if (!item) return;
+                item.title = document.getElementById(`task-title-${id}`)?.value ?? item.title;
+                item.description = document.getElementById(`task-desc-${id}`)?.value ?? item.description;
+                item.priority = document.getElementById(`task-priority-${id}`)?.value ?? item.priority;
+                item.dueDate = document.getElementById(`task-due-${id}`)?.value || null;
+            } else {
+                const item = _notes.find(n => n.tempId === id);
+                if (!item) return;
+                item.title = document.getElementById(`note-title-${id}`)?.value ?? item.title;
+                item.content = document.getElementById(`note-content-${id}`)?.value ?? item.content;
+            }
+
+            // re-render card
+            const arr = type === 'task' ? _tasks : _notes;
+            const item = arr.find(x => x.tempId === id);
+            const card = document.getElementById(`${type}-card-${id}`);
+            if (!card || !item) return;
+
+            const tmp = document.createElement('div');
+            tmp.innerHTML = type === 'task' ? taskCard(item) : noteCard(item);
+            card.replaceWith(tmp.firstElementChild);
+            lucide.createIcons();
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  COUNTS
+        // ══════════════════════════════════════════════════════════
+        function updateCounts() {
+            const at = _tasks.filter(t => t.approved).length;
+            const an = _notes.filter(n => n.approved).length;
+            document.getElementById('tasks-count').textContent = `${at}/${_tasks.length}`;
+            document.getElementById('notes-count').textContent = `${an}/${_notes.length}`;
+
+            const total = at + an;
+            document.getElementById('confirm-label').textContent =
+                total === 0 ? 'Save (nothing selected)' : `Save ${total} item${total !== 1 ? 's' : ''}`;
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  CONFIRM — POST to /Meetings/ConfirmAnalysis
+        // ══════════════════════════════════════════════════════════
+        async function confirmAnalysis() {
+            const btn = document.getElementById('confirm-btn');
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg> Saving…`;
+
+            const approvedTasks = _tasks
+                .filter(t => t.approved)
+                .map(({ tempId, editing, approved, ...rest }) => rest);
+
+            const approvedNotes = _notes
+                .filter(n => n.approved)
+                .map(({ tempId, editing, approved, ...rest }) => rest);
+
+            const payload = {
+                meetingId: MEETING_ID,
+                summary: _preview.summary,
+                keyInsights: _preview.keyInsights,
+                keyDecisions: _preview.keyDecisions ?? [],
+                approvedTasks,
+                approvedNotes,
+            };
+
+            try {
+                const res = await fetch('/Meetings/ConfirmAnalysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': CSRF_TOKEN,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    closeReviewModal();
+                    // small delay so modal closes gracefully
+                    setTimeout(() => window.location.reload(), 300);
+                } else {
+                    showToast(data.error ?? 'Save failed.', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="save" class="w-3.5 h-3.5"></i> <span>Save items</span>';
+                    lucide.createIcons();
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Network error. Please try again.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="save" class="w-3.5 h-3.5"></i> <span>Save items</span>';
+                lucide.createIcons();
+            }
+        }
+
+        // close on backdrop click
+        document.getElementById('review-modal')?.addEventListener('click', function (e) {
+            if (e.target === this) closeReviewModal();
+        });
     </script>
 }

@@ -38,7 +38,6 @@ namespace MeetIQ.Application.Features.Meetings.Commands.AnalyzeMeetingCommand
             AnalyzeMeetingCommand request,
             CancellationToken ct)
         {
-            // 1. Load meeting + transcript
             var meeting = await meetingRepository.GetMeetingWithTranscription(request.MeetingId, ct);
 
             if (meeting is null)
@@ -53,17 +52,14 @@ namespace MeetIQ.Application.Features.Meetings.Commands.AnalyzeMeetingCommand
 
             try
             {
-                // 2. Call Gemini
-                _logger.LogInformation("Sending transcript to Gemini for meeting {Id}", meeting.Id);
+                _logger.LogInformation("Sending transcript to AI for meeting {Id}", meeting.Id);
                 var analysis = await analysisService.AnalyzeTranscriptAsync(
                     transcript.Text,
                     meeting.Title,
                     ct);
 
-                // 3. Save / update Summary
                 var existingSummary = await meetingSummaryRepository.GetAsync(s => s.MeetingId == meeting.Id);
 
-                // KeyDecisions serialized as JSON array string
                 var keyDecisionsJson = analysis.KeyDecisions.Any()
                     ? JsonSerializer.Serialize(analysis.KeyDecisions)
                     : null;
@@ -88,7 +84,6 @@ namespace MeetIQ.Application.Features.Meetings.Commands.AnalyzeMeetingCommand
                     existingSummary.IsEdited = false;
                 }
 
-                // 4. Save Tasks
                 foreach (var t in analysis.Tasks)
                 {
                     var priority = t.Priority?.ToLower() switch

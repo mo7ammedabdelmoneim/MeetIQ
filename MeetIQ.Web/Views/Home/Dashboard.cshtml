@@ -296,7 +296,7 @@
 
                         @if (!string.IsNullOrEmpty(note.Content))
                         {
-                            <!-- ✅ FIX: Strip HTML tags before displaying the preview -->
+                            <!-- FIX: Strip HTML tags before displaying the preview -->
                             <p class="text-xs text-slate-500 line-clamp-2">@StripHtml(note.Content)</p>
                         }
 

@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using MeetIQ.Application.Features.Notifications.Commands.CreateNotificationCommand;
 using MeetIQ.Application.Interfaces;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Domain.Entities;

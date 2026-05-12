@@ -1,7 +1,6 @@
 ﻿using Dapper;
 using MeetIQ.Application.Features.Dashboard.DTOs;
 using MeetIQ.Application.Interfaces.Repositories;
-using MeetIQ.Infrastructure.Persistence.Repositories;
 using SqlKata.Execution;
 
 namespace MeetIQ.Infrastructure.Persistence.Repositories

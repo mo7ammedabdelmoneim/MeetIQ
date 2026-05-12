@@ -22,8 +22,8 @@
     {
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public string Priority { get; set; } = "Low";   // Low | Medium | High
-        public string? DueDate { get; set; }            // "YYYY-MM-DD" or null
+        public string Priority { get; set; } = "Low";   
+        public string? DueDate { get; set; }            
     }
 
     public class ExtractedNote

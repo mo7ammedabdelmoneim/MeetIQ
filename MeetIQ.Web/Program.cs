@@ -1,7 +1,7 @@
 using Hangfire;
 using MeetIQ.Application.Common.Options;
 using MeetIQ.Application.DependencyInjection;
-using MeetIQ.Application.Interfaces.Services;
+using MeetIQ.Application.Features.Meetings.Hubs;
 using MeetIQ.Infrastructure.DependencyInjection;
 using MeetIQ.Infrastructure.Identity;
 using MeetIQ.Infrastructure.Jobs;
@@ -28,24 +28,6 @@ namespace MeetIQ.Web
             //            //    options.Filters.Add<GlobalExceptionFilter>();
             //            //});
 
-            builder.Services.ConfigureApplicationCookie(options =>
-            {
-                options.LoginPath = "/Auth/Login";
-                options.LogoutPath = "/Auth/Logout";
-                options.AccessDeniedPath = "/Auth/AccessDenied";
-                options.ExpireTimeSpan = TimeSpan.FromDays(30);
-                options.SlidingExpiration = true;
-            });
-
-            builder.Services.AddAuthentication()
-                .AddGoogle(options =>
-                {
-                    var google = builder.Configuration.GetSection("Authentication:Google");
-                    options.ClientId = google["ClientId"]!;
-                    options.ClientSecret = google["ClientSecret"]!;
-                    options.CallbackPath = "/signin-google";
-                    options.Scope.Add("profile");
-                });
 
             // Kestrel Configuration
             builder.WebHost.ConfigureKestrel(options =>
@@ -53,7 +35,8 @@ namespace MeetIQ.Web
                 options.Limits.MaxRequestBodySize = 500 * 1024 * 1024; // 500 MB
             });
 
-           
+            builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
+
             builder.Services.AddScoped<TaskDueSoonJob>();
             builder.Services.AddScoped<TaskOverdueJob>();
             builder.Services.AddScoped<MeetingStartingSoonJob>();
@@ -122,7 +105,7 @@ namespace MeetIQ.Web
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
             app.MapHub<NotificationHub>("/hubs/notifications");
-
+            app.MapHub<MeetingHub>("/meetingHub");
 
             app.Run();
         }

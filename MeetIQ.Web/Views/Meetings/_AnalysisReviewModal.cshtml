@@ -1,0 +1,99 @@
+﻿<div id="review-modal"
+     class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm
+            flex items-center justify-center p-4">
+
+    <div class="bg-surface-card border border-surface-border rounded-2xl
+                w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl
+                transform transition-all duration-200 scale-95 opacity-0"
+         id="review-modal-inner">
+
+        <!-- ── Header ── -->
+        <div class="flex items-center justify-between px-6 py-4
+                    border-b border-surface-border shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-600/30
+                            flex items-center justify-center">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-violet-400"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-white">Review AI Analysis</p>
+                    <p class="text-xs text-slate-500">Approve or reject each item before saving</p>
+                </div>
+            </div>
+            <button onclick="closeReviewModal()"
+                    class="text-slate-500 hover:text-slate-300 transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- ── Tabs ── -->
+        <div class="flex border-b border-surface-border shrink-0 px-6">
+            <button id="tab-tasks"
+                    onclick="switchTab('tasks')"
+                    class="tab-btn active-tab px-4 py-3 text-xs font-semibold
+                           border-b-2 border-violet-500 text-violet-400
+                           transition-colors -mb-px">
+                <span class="flex items-center gap-1.5">
+                    <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+                    Tasks
+                    <span id="tasks-count"
+                          class="px-1.5 py-0.5 rounded-full bg-violet-500/20
+                                 text-violet-300 text-[10px] font-bold">0</span>
+                </span>
+            </button>
+            <button id="tab-notes"
+                    onclick="switchTab('notes')"
+                    class="tab-btn px-4 py-3 text-xs font-semibold
+                           border-b-2 border-transparent text-slate-500
+                           hover:text-slate-300 transition-colors -mb-px">
+                <span class="flex items-center gap-1.5">
+                    <i data-lucide="sticky-note" class="w-3.5 h-3.5"></i>
+                    Notes
+                    <span id="notes-count"
+                          class="px-1.5 py-0.5 rounded-full bg-surface-border
+                                 text-slate-400 text-[10px] font-bold">0</span>
+                </span>
+            </button>
+        </div>
+
+        <!-- ── Body ── -->
+        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-3" id="review-body">
+            <!-- Tasks Panel -->
+            <div id="panel-tasks"></div>
+            <!-- Notes Panel -->
+            <div id="panel-notes" class="hidden"></div>
+        </div>
+
+        <!-- ── Footer ── -->
+        <div class="flex items-center justify-between px-6 py-4
+                    border-t border-surface-border shrink-0 gap-3">
+            <div class="flex items-center gap-2">
+                <button onclick="selectAll(true)"
+                        class="text-xs text-slate-500 hover:text-violet-400 transition-colors">
+                    Accept all
+                </button>
+                <span class="text-slate-700">·</span>
+                <button onclick="selectAll(false)"
+                        class="text-xs text-slate-500 hover:text-red-400 transition-colors">
+                    Reject all
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="closeReviewModal()"
+                        class="px-4 py-2 rounded-xl text-xs font-medium text-slate-500
+                               hover:text-slate-300 border border-surface-border
+                               hover:border-slate-600 transition-colors">
+                    Cancel
+                </button>
+                <button id="confirm-btn"
+                        onclick="confirmAnalysis()"
+                        class="flex items-center gap-2 px-5 py-2 rounded-xl
+                               bg-violet-600 hover:bg-violet-500 text-white
+                               text-xs font-semibold transition-colors shadow-lg">
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                    <span id="confirm-label">Save items</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

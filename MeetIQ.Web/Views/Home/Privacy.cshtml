@@ -1,6 +1,211 @@
 ﻿@{
     ViewData["Title"] = "Privacy Policy";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="max-w-3xl mx-auto py-8">
+
+    <!-- Header -->
+    <div class="mb-10">
+        <div class="flex items-center gap-2 text-brand-400 text-xs font-semibold uppercase tracking-widest mb-3">
+            <i data-lucide="shield" class="w-4 h-4"></i>
+            Legal
+        </div>
+        <h1 class="text-2xl font-semibold text-white mb-2">Privacy Policy</h1>
+        <p class="text-slate-500 text-sm">Last updated: @DateTime.Now.ToString("MMMM dd, yyyy")</p>
+    </div>
+
+    <!-- Intro -->
+    <div class="bg-surface-card border border-surface-border rounded-xl p-6 mb-6">
+        <p class="text-slate-400 text-sm leading-relaxed">
+            Welcome to <span class="text-white font-medium">MeetIQ</span>. We are committed to protecting your personal
+            information and your right to privacy. This Privacy Policy explains how we collect, use, and safeguard
+            your information when you use our platform.
+        </p>
+    </div>
+
+    <!-- Sections -->
+    <div class="space-y-4">
+
+        <!-- Section 1 -->
+        <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+            <div class="flex items-center gap-3 px-6 py-4 border-b border-surface-border">
+                <div class="w-7 h-7 rounded-lg bg-brand-950 border border-brand-900 flex items-center justify-center shrink-0">
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-brand-400"></i>
+                </div>
+                <h2 class="text-sm font-semibold text-white">1. Information We Collect</h2>
+            </div>
+            <div class="px-6 py-4 space-y-3 text-sm text-slate-400 leading-relaxed">
+                <p>We collect information you provide directly to us when you:</p>
+                <ul class="space-y-2 ml-4">
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Create an account (name, email address, password)
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Schedule or join meetings (meeting details, participants, timestamps)
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Use AI features such as transcripts and summaries (audio data, generated text)
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Create tasks or notes within the platform
+                    </li>
+                </ul>
+                <p>We also automatically collect certain technical data such as IP addresses, browser type, and usage logs to maintain and improve the service.</p>
+            </div>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+            <div class="flex items-center gap-3 px-6 py-4 border-b border-surface-border">
+                <div class="w-7 h-7 rounded-lg bg-brand-950 border border-brand-900 flex items-center justify-center shrink-0">
+                    <i data-lucide="settings-2" class="w-3.5 h-3.5 text-brand-400"></i>
+                </div>
+                <h2 class="text-sm font-semibold text-white">2. How We Use Your Information</h2>
+            </div>
+            <div class="px-6 py-4 space-y-2 text-sm text-slate-400 leading-relaxed">
+                <p>We use the information we collect to:</p>
+                <ul class="space-y-2 ml-4 mt-2">
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Provide, operate, and improve the MeetIQ platform
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Generate AI-powered transcripts and meeting summaries
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Send notifications related to your meetings, tasks, and invitations
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Respond to your support requests and feedback
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Ensure platform security and prevent fraud or abuse
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+            <div class="flex items-center gap-3 px-6 py-4 border-b border-surface-border">
+                <div class="w-7 h-7 rounded-lg bg-brand-950 border border-brand-900 flex items-center justify-center shrink-0">
+                    <i data-lucide="share-2" class="w-3.5 h-3.5 text-brand-400"></i>
+                </div>
+                <h2 class="text-sm font-semibold text-white">3. Sharing of Information</h2>
+            </div>
+            <div class="px-6 py-4 text-sm text-slate-400 leading-relaxed space-y-3">
+                <p>We do <span class="text-white font-medium">not</span> sell or rent your personal data to third parties. We may share information only in the following limited circumstances:</p>
+                <ul class="space-y-2 ml-4">
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        With other meeting participants as necessary to operate the service
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        With trusted service providers who assist us in operating the platform (under strict confidentiality agreements)
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        When required by law or to protect the rights and safety of users
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+            <div class="flex items-center gap-3 px-6 py-4 border-b border-surface-border">
+                <div class="w-7 h-7 rounded-lg bg-brand-950 border border-brand-900 flex items-center justify-center shrink-0">
+                    <i data-lucide="lock" class="w-3.5 h-3.5 text-brand-400"></i>
+                </div>
+                <h2 class="text-sm font-semibold text-white">4. Data Security</h2>
+            </div>
+            <div class="px-6 py-4 text-sm text-slate-400 leading-relaxed">
+                <p>We implement industry-standard security measures including encryption in transit (TLS) and at rest, access controls, and regular security audits to protect your data. However, no system is completely immune to risk, and we encourage you to use a strong, unique password for your account.</p>
+            </div>
+        </div>
+
+        <!-- Section 5 -->
+        <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+            <div class="flex items-center gap-3 px-6 py-4 border-b border-surface-border">
+                <div class="w-7 h-7 rounded-lg bg-brand-950 border border-brand-900 flex items-center justify-center shrink-0">
+                    <i data-lucide="user-check" class="w-3.5 h-3.5 text-brand-400"></i>
+                </div>
+                <h2 class="text-sm font-semibold text-white">5. Your Rights</h2>
+            </div>
+            <div class="px-6 py-4 text-sm text-slate-400 leading-relaxed space-y-3">
+                <p>Depending on your location, you may have the right to:</p>
+                <ul class="space-y-2 ml-4">
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Access the personal data we hold about you
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Request correction or deletion of your data
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Object to or restrict certain processing activities
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1 h-1 rounded-full bg-brand-400 mt-2 shrink-0"></span>
+                        Request a portable copy of your data
+                    </li>
+                </ul>
+                <p>To exercise any of these rights, please contact us using the details below.</p>
+            </div>
+        </div>
+
+        <!-- Section 6 -->
+        <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+            <div class="flex items-center gap-3 px-6 py-4 border-b border-surface-border">
+                <div class="w-7 h-7 rounded-lg bg-brand-950 border border-brand-900 flex items-center justify-center shrink-0">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-brand-400"></i>
+                </div>
+                <h2 class="text-sm font-semibold text-white">6. Data Retention</h2>
+            </div>
+            <div class="px-6 py-4 text-sm text-slate-400 leading-relaxed">
+                <p>We retain your personal data for as long as your account is active or as needed to provide you with our services. If you delete your account, we will delete or anonymize your data within 30 days, except where retention is required by law.</p>
+            </div>
+        </div>
+
+        <!-- Section 7 -->
+        <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+            <div class="flex items-center gap-3 px-6 py-4 border-b border-surface-border">
+                <div class="w-7 h-7 rounded-lg bg-brand-950 border border-brand-900 flex items-center justify-center shrink-0">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-brand-400"></i>
+                </div>
+                <h2 class="text-sm font-semibold text-white">7. Changes to This Policy</h2>
+            </div>
+            <div class="px-6 py-4 text-sm text-slate-400 leading-relaxed">
+                <p>We may update this Privacy Policy from time to time. When we do, we will revise the date at the top of this page and, where appropriate, notify you via email or an in-app notification. We encourage you to review this policy periodically.</p>
+            </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="bg-brand-950 border border-brand-900 rounded-xl p-6">
+            <div class="flex items-start gap-4">
+                <div class="w-8 h-8 rounded-lg bg-brand-900 flex items-center justify-center shrink-0 mt-0.5">
+                    <i data-lucide="mail" class="w-4 h-4 text-brand-400"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-white mb-1">Contact Us</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">
+                        If you have any questions or concerns about this Privacy Policy or how we handle your data, please reach out to our team at
+                        <a href="mailto:privacy@meetiq.app" class="text-brand-400 hover:text-brand-300 transition-colors">privacy@meetiq.app</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

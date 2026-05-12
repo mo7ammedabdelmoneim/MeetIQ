@@ -1,8 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MeetIQ.Domain.Entities;
-using System.Reflection.Emit;
-
 namespace MeetIQ.Infrastructure.Presistence.Configurations
 {
     public class MeetingInvitationConfiguration : IEntityTypeConfiguration<MeetingInvitation>

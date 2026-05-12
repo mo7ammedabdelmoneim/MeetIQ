@@ -1,7 +1,6 @@
 ﻿using MeetIQ.Application.Common.Constants;
 using MeetIQ.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
-
 namespace MeetIQ.Infrastructure.Identity
 {
     public static class UserSeeder

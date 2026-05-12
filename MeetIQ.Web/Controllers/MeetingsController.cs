@@ -20,6 +20,10 @@ using MeetIQ.Application.Features.Meetings.Queries.SearchUsersToInviteQuery;
 using MeetIQ.Application.Features.Meetings.Queries.GetUserPendingInvitationsQuery;
 using MeetIQ.Application.Features.Transcripts.Commands.TranscribeMeetingCommand;
 using MeetIQ.Application.Features.Meetings.Commands.AnalyzeMeetingCommand;
+using MeetIQ.Application.Features.Meetings.Commands.ConfirmAnalysisCommand;
+using MeetIQ.Application.Features.Meetings.Commands.PreviewAnalysisCommand;
+using MeetIQ.Application.Features.Meetings.DTOs;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace MeetIQ.Web.Controllers
 {
@@ -240,47 +244,6 @@ namespace MeetIQ.Web.Controllers
             return View(invitations);
         }
 
-        // Jitsi embedded room
-        //[HttpGet]
-        //public async Task<IActionResult> Room(Guid id)
-        //{
-        //    var meeting = await mediator.Send(new GetMeetingByIdQuery { MeetingId = id });
-        //    if (meeting == null) return NotFound();
-
-        //    if (meeting.Status == MeetingStatus.Cancelled)
-        //        return BadRequest("Meeting is cancelled.");
-
-        //    if (meeting.Status == MeetingStatus.Ended)
-        //        return RedirectToAction(nameof(Details), new { id });
-
-        //    var isHost = meeting.HostId == CurrentUserId;
-
-        //    // Record participant join
-        //    await mediator.Send(new JoinMeetingCommand
-        //    {
-        //        MeetingId = id,
-        //        UserId = CurrentUserId
-        //    });
-
-        //    // Generate Jitsi JWT (only needed for self-hosted / JaaS)
-        //    var token = jitsiTokenService.GenerateToken(
-        //        roomId: meeting.JitsiRoomId,
-        //        userId: CurrentUserId,
-        //        userName: CurrentUserName,
-        //        userEmail: CurrentUserEmail,
-        //        isModerator: isHost
-        //    );
-
-        //    ViewData["Title"] = meeting.Title;
-        //    ViewBag.Meeting = meeting;
-        //    ViewBag.IsHost = isHost;
-        //    ViewBag.JitsiToken = token;
-        //    ViewBag.UserName = CurrentUserName;
-        //    ViewBag.UserEmail = CurrentUserEmail;
-
-        //    return View(meeting);
-        //}
-
 
         [HttpGet]
         public async Task<IActionResult> Room(Guid id)
@@ -375,6 +338,48 @@ namespace MeetIQ.Web.Controllers
                 : $"Analysis failed: {result.Error}";
 
             return RedirectToAction(nameof(Details), new { id = meetingId });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> PreviewAnalysis(Guid meetingId)
+        {
+            var result = await mediator.Send(new PreviewAnalysisCommand
+            {
+                MeetingId = meetingId,
+                RequestedByUserId = CurrentUserId
+            });
+
+            if (!result.Success)
+                return Json(new { success = false, error = result.Error });
+
+            return Json(new { success = true, preview = result.Preview });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmAnalysis([FromBody] ConfirmAnalysisRequest body)
+        {
+            var result = await mediator.Send(new ConfirmAnalysisCommand
+            {
+                MeetingId = body.MeetingId,
+                RequestedByUserId = CurrentUserId,
+                Summary = body.Summary,
+                KeyInsights = body.KeyInsights,
+                KeyDecisions = body.KeyDecisions,
+                ApprovedTasks = body.ApprovedTasks,
+                ApprovedNotes = body.ApprovedNotes,
+            });
+
+            return Json(new { success = result.Success, error = result.Error });
+        }
+
+        public class ConfirmAnalysisRequest
+        {
+            public Guid MeetingId { get; set; }
+            public string Summary { get; set; } = string.Empty;
+            public string KeyInsights { get; set; } = string.Empty;
+            public List<string> KeyDecisions { get; set; } = [];
+            public List<PreviewTaskDto> ApprovedTasks { get; set; } = [];
+            public List<PreviewNoteDto> ApprovedNotes { get; set; } = [];
         }
     }
 }

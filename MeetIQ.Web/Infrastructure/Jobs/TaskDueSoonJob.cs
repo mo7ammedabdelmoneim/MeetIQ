@@ -1,6 +1,5 @@
 ﻿using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Application.Services;
-using MeetIQ.Domain.Entities;
 using MeetIQ.Domain.Enums;
 
 namespace MeetIQ.Infrastructure.Jobs

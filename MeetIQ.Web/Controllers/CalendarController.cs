@@ -59,7 +59,7 @@ namespace MeetIQ.Web.Controllers
             {
                 id = e.Id,
                 title = e.Title,
-                start = e.StartTime.ToString("o"),   // ISO-8601
+                start = e.StartTime.ToString("o"),   
                 end = e.EndTime.ToString("o"),
                 color = e.Color,
                 extendedProps = new { e.Description, e.MeetingId, e.MeetingTitle }

@@ -1,5 +1,4 @@
-﻿
-using MeetIQ.Domain.Enums;
+﻿using MeetIQ.Domain.Enums;
 
 namespace MeetIQ.Domain.Entities
 {

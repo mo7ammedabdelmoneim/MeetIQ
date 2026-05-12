@@ -6,7 +6,6 @@ using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Application.Services;
 using MeetIQ.Domain.Entities;
-using MeetIQ.Infrastructure.Identity;
 using MeetIQ.Infrastructure.Persistence.Repositories;
 using MeetIQ.Infrastructure.Presistence;
 using MeetIQ.Infrastructure.Presistence.Repositories;
@@ -63,6 +62,26 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>,AppClaimsPrincipalFactory>();
 
 
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Auth/Login";
+                options.LogoutPath = "/Auth/Logout";
+                options.AccessDeniedPath = "/Auth/AccessDenied";
+                options.ExpireTimeSpan = TimeSpan.FromDays(30);
+                options.SlidingExpiration = true;
+            });
+
+            services.AddAuthentication()
+                .AddGoogle(options =>
+                {
+                    var google = configuration.GetSection("Authentication:Google");
+                    options.ClientId = google["ClientId"]!;
+                    options.ClientSecret = google["ClientSecret"]!;
+                    options.CallbackPath = "/signin-google";
+                    options.Scope.Add("profile");
+                });
+
+
             // Hangfire Registration 
             services.AddHangfire(config => config
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -117,14 +136,11 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddHttpClient<IAnalysisService, GroqAnalysisService>();
             services.AddScoped<ITranscriptionService, WhisperTranscriptionService>();
             services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
-            
-            
+                       
             
             // Options
             services.Configure<WhisperOptions>(configuration.GetSection("Whisper"));
             services.Configure<GroqOptions>(configuration.GetSection("Groq"));
-
-
 
             return services;
         }

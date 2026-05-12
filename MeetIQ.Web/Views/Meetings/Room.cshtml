@@ -35,7 +35,6 @@
             transform: translateX(-50%) translateY(0);
         }
 
-    /* Recording pulse animation */
     @@keyframes rec-pulse {
         0%, 100% {
             opacity: 1;
@@ -50,7 +49,6 @@
         animation: rec-pulse 1.4s ease-in-out infinite;
     }
 
-    /* Upload progress bar */
     #upload-bar-inner {
         transition: width 0.3s ease;
     }
@@ -68,7 +66,7 @@
     <input type="hidden" name="meetingId" value="@Model.Id" />
 </form>
 
-<!-- Toast -->
+<!-- Copy toast -->
 <div id="copy-toast"
      class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-card border border-emerald-500/30
             text-emerald-400 text-sm font-medium shadow-lg">
@@ -76,10 +74,12 @@
     Meeting link copied!
 </div>
 
-<!-- Upload overlay (shown while uploading after meeting ends) -->
+<!-- Upload overlay -->
 <div id="upload-overlay"
-     class="hidden fixed inset-0 z-50 bg-surface/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
-    <div class="bg-surface-card border border-surface-border rounded-2xl p-8 flex flex-col items-center gap-4 w-80">
+     class="hidden fixed inset-0 z-50 bg-surface/90 backdrop-blur-sm
+            flex flex-col items-center justify-center gap-4">
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-8
+                flex flex-col items-center gap-4 w-80">
         <div class="w-10 h-10 rounded-full bg-brand-600/20 flex items-center justify-center">
             <i data-lucide="upload-cloud" class="w-5 h-5 text-brand-400"></i>
         </div>
@@ -109,16 +109,16 @@
         <div class="flex items-center gap-2">
 
             <!-- Copy Link -->
-            <button id="copy-btn" onclick="copyRoomLink(event)"
+            <button id="copy-btn" onclick="copyRoomLink()"
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border
                            text-slate-400 hover:text-white hover:border-brand-600 text-xs font-medium transition-colors">
                 <i data-lucide="link" class="w-3.5 h-3.5"></i>
                 Copy Link
             </button>
 
-            <!-- ── Recording button (host only) ── -->
             @if (isHost)
             {
+                <!-- Recording -->
                 <button id="rec-btn" onclick="toggleRecording()"
                         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border
                                text-slate-400 hover:text-white hover:border-red-500/50 text-xs font-medium transition-colors"
@@ -137,9 +137,9 @@
                 Leave
             </button>
 
-            <!-- End for All (host only) -->
             @if (isHost)
             {
+                <!-- End for All -->
                 <button onclick="handleEnd()"
                         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500
                                text-white text-xs font-semibold transition-colors">
@@ -157,22 +157,24 @@
 @section Scripts {
     <script src="https://meet.jit.si/external_api.js"></script>
     <script>
-        // ── Config ────────────────────────────────────────────────────────
+        // ── Config ──────────────────────────────────────────────────
         const domain = 'meet.jit.si';
         const roomName = '@Model.JitsiRoomId';
         const meetingId = '@Model.Id';
-        const userName = '@Html.Raw(userName)';
-        const userEmail = '@Html.Raw(userEmail)';
+        const displayName = '@Html.Raw(userName)';
+        const displayEmail = '@Html.Raw(userEmail)';
         const isHost = @(isHost ? "true" : "false");
         const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
 
-        // ── Jitsi ─────────────────────────────────────────────────────────
+        let isEndingMeeting = false;
+
+        // ── Jitsi ───────────────────────────────────────────────────
         const api = new JitsiMeetExternalAPI(domain, {
             roomName,
             parentNode: document.getElementById('jitsi-container'),
             width: '100%',
             height: '100%',
-            userInfo: { displayName: userName, email: userEmail },
+            userInfo: { displayName, email: displayEmail },
             configOverwrite: {
                 startWithAudioMuted: false,
                 startWithVideoMuted: false,
@@ -195,114 +197,97 @@
         });
 
         api.addEventListeners({
-            videoConferenceLeft: () => handleLeave()
+            videoConferenceLeft: () => {
+                if (!isEndingMeeting) handleLeave();
+            }
         });
 
-        // ── Recording State ────────────────────────────────────────────────
+        // ── SignalR ──────
+        (function initSignalR() {
+            if (typeof signalR === 'undefined') {
+                console.warn('SignalR not loaded — host-end broadcast disabled.');
+                return;
+            }
+            const hub = new signalR.HubConnectionBuilder()
+                .withUrl('/meetingHub')
+                .withAutomaticReconnect()
+                .build();
+
+            hub.on('MeetingEnded', async () => {
+                if (!isEndingMeeting) {
+                    api.executeCommand('hangup');
+                    await delay(500);
+                    document.getElementById('leave-form').submit();
+                }
+            });
+
+            hub.start()
+                .then(() => hub.invoke('JoinMeeting', meetingId))
+                .catch(err => console.warn('SignalR connect failed:', err));
+        })();
+
+        // ── Recording State ─────────────────────────────────────────
         let mediaRecorder = null;
         let audioChunks = [];
         let isRecording = false;
-        let displayStream = null;   // tab audio (remote participants)
-        let micStream = null;   // microphone (local user)
-        let audioCtx = null;   // Web Audio context for mixing
+        let displayStream = null;
+        let micStream = null;
+        let audioCtx = null;
 
-        // ── Toggle Recording ──────────────────────────────────────────────
         async function toggleRecording() {
-            if (!isRecording) {
-                await startRecording();
-            } else {
-                stopRecording();
-            }
+            isRecording ? stopRecording() : await startRecording();
         }
 
         async function startRecording() {
             try {
-                // ── Step 1: capture tab audio (remote participants) ──────────
-                // User sees browser picker → must select "This Tab" + enable "Share tab audio"
                 displayStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: true,          // required by spec — stopped immediately below
-                    audio: {
-                        echoCancellation: false,
-                        noiseSuppression: false,
-                        sampleRate: 44100
-                    }
+                    video: true,
+                    audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 }
                 });
-
-                // Kill video tracks right away — we don't need them
                 displayStream.getVideoTracks().forEach(t => t.stop());
 
                 const tabAudioTracks = displayStream.getAudioTracks();
-                if (tabAudioTracks.length === 0) {
-                    alert('No tab audio found.\n\nIn the browser picker please:\n1. Choose "This Tab"\n2. Enable "Share tab audio" checkbox');
+                if (!tabAudioTracks.length) {
+                    alert('No tab audio found.\n\nIn the browser picker:\n1. Choose "This Tab"\n2. Enable "Share tab audio"');
                     displayStream.getTracks().forEach(t => t.stop());
                     displayStream = null;
                     return;
                 }
 
-                // ── Step 2: capture microphone (local user) ──────────────────
                 micStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        sampleRate: 44100
-                    },
+                    audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
                     video: false
                 });
 
-                // ── Step 3: mix both sources with Web Audio API ───────────────
                 audioCtx = new AudioContext({ sampleRate: 44100 });
-                const destination = audioCtx.createMediaStreamDestination();
+                const dest = audioCtx.createMediaStreamDestination();
+                audioCtx.createMediaStreamSource(new MediaStream(tabAudioTracks)).connect(dest);
+                audioCtx.createMediaStreamSource(micStream).connect(dest);
 
-                // Tab audio node
-                const tabSource = audioCtx.createMediaStreamSource(
-                    new MediaStream(tabAudioTracks)
-                );
-                tabSource.connect(destination);
-
-                // Mic node
-                const micSource = audioCtx.createMediaStreamSource(micStream);
-                micSource.connect(destination);
-
-                // destination.stream is the mixed audio stream
-                const mixedStream = destination.stream;
-
-                // ── Step 4: record the mixed stream ──────────────────────────
                 const mimeType = getSupportedMimeType();
                 audioChunks = [];
-
-                mediaRecorder = new MediaRecorder(mixedStream, { mimeType });
-
-                mediaRecorder.ondataavailable = e => {
-                    if (e.data && e.data.size > 0) audioChunks.push(e.data);
-                };
+                mediaRecorder = new MediaRecorder(dest.stream, { mimeType });
+                mediaRecorder.ondataavailable = e => { if (e.data?.size > 0) audioChunks.push(e.data); };
                 mediaRecorder.onstop = () => uploadRecording();
-
-                mediaRecorder.start(10_000);   // chunk every 10 s
+                mediaRecorder.start(10_000);
                 isRecording = true;
                 setRecordingUI(true);
 
-                // Auto-stop if user dismisses the browser share bar
-                tabAudioTracks[0].onended = () => {
-                    if (isRecording) stopRecording();
-                };
+                tabAudioTracks[0].onended = () => { if (isRecording) stopRecording(); };
 
             } catch (err) {
-                // Clean up any streams that did open
                 displayStream?.getTracks().forEach(t => t.stop());
                 micStream?.getTracks().forEach(t => t.stop());
                 audioCtx?.close();
                 displayStream = micStream = audioCtx = null;
-
-                if (err.name === 'NotAllowedError') return; // user cancelled — silent
+                if (err.name === 'NotAllowedError') return;
                 console.error('Recording error:', err);
                 alert('Could not start recording: ' + err.message);
             }
         }
 
         function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
+            if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop();
             displayStream?.getTracks().forEach(t => t.stop());
             micStream?.getTracks().forEach(t => t.stop());
             audioCtx?.close();
@@ -313,23 +298,20 @@
 
         function getSupportedMimeType() {
             const types = [
-                'audio/webm;codecs=opus',
-                'audio/webm',
-                'audio/ogg;codecs=opus',
-                'audio/ogg',
-                'audio/mp4',
+                'audio/webm;codecs=opus', 'audio/webm',
+                'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4'
             ];
             return types.find(t => MediaRecorder.isTypeSupported(t)) ?? '';
         }
 
-        // ── Upload to server ──────────────────────────────────────────────
+        // ── Upload ──────────────────────────────────────────────────
         async function uploadRecording() {
-            if (audioChunks.length === 0) return;
+            if (!audioChunks.length) return;
 
             const mimeType = mediaRecorder?.mimeType ?? 'audio/webm';
             const extension = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
             const blob = new Blob(audioChunks, { type: mimeType });
-            audioChunks = [];   // حرر الذاكرة فوراً
+            audioChunks = [];
 
             showUploadOverlay(true);
             setUploadStatus('Uploading…', 10);
@@ -345,8 +327,8 @@
                 await delay(800);
             } catch (err) {
                 console.error('Upload failed:', err);
-                setUploadStatus('Upload failed — saving locally as backup…', 100);
-                downloadLocally(blob, extension);  // fallback فقط لو السيرفر فشل
+                setUploadStatus('Upload failed — saving locally…', 100);
+                downloadLocally(blob, extension);
                 await delay(2000);
             } finally {
                 showUploadOverlay(false);
@@ -356,42 +338,31 @@
         function uploadWithProgress(formData) {
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', `/Meetings/UploadRecording`);
-
+                xhr.open('POST', '/Meetings/UploadRecording');
                 xhr.upload.onprogress = e => {
-                    if (e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
-                        setUploadStatus(`Uploading… ${pct}%`, pct);
-                    }
+                    if (e.lengthComputable)
+                        setUploadStatus(`Uploading… ${Math.round(e.loaded / e.total * 100)}%`,
+                            Math.round(e.loaded / e.total * 100));
                 };
-
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) resolve();
-                    else reject(new Error(`Server returned ${xhr.status}`));
-                };
-
+                xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
                 xhr.onerror = () => reject(new Error('Network error'));
                 xhr.send(formData);
             });
         }
 
-        // Local download fallback if server upload fails
         function downloadLocally(blob, ext) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `meeting-recording.${ext}`;
-            a.click();
+            a.href = url; a.download = `meeting-recording.${ext}`; a.click();
             setTimeout(() => URL.revokeObjectURL(url), 5000);
         }
 
-        // ── UI helpers ─────────────────────────────────────────────────────
+        // ── UI helpers ──────────────────────────────────────────────
         function setRecordingUI(recording) {
             const btn = document.getElementById('rec-btn');
             const label = document.getElementById('rec-label');
             const icon = document.getElementById('rec-icon');
             const indicator = document.getElementById('rec-indicator');
-
             if (!btn) return;
 
             if (recording) {
@@ -422,34 +393,28 @@
 
         function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-        // ── Leave / End helpers ────────────────────────────────────────────
+        // ── Leave / End ─────────────────────────────────────────────
         async function handleLeave() {
             await stopAndWaitForUpload();
             document.getElementById('leave-form').submit();
         }
 
         async function handleEnd() {
+            isEndingMeeting = true;
             await stopAndWaitForUpload();
             document.getElementById('end-form').submit();
         }
 
-        // يوقف التسجيل ويستنى الـ upload يخلص فعلاً قبل ما نروح
         function stopAndWaitForUpload() {
             return new Promise(resolve => {
                 if (!isRecording) { resolve(); return; }
-
-                // بنبدل onstop مؤقتاً عشان نعرف امتى الـ upload خلص
-                mediaRecorder.onstop = async () => {
-                    await uploadRecording();
-                    resolve();
-                };
-
+                mediaRecorder.onstop = async () => { await uploadRecording(); resolve(); };
                 stopRecording();
             });
         }
 
-        // ── Copy link ──────────────────────────────────────────────────────
-        function copyRoomLink(event) {
+        // ── Copy link ───────────────────────────────────────────────
+        function copyRoomLink() {
             const link = `${window.location.origin}/Meetings/Room/${meetingId}`;
             navigator.clipboard.writeText(link).then(() => {
                 const toast = document.getElementById('copy-toast');

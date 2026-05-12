@@ -9,8 +9,6 @@ using MeetIQ.Infrastructure.Presistence;
 using SqlKata.Execution;
 using Microsoft.EntityFrameworkCore;
 using MeetIQ.Application.Features.Notifications.Job.DTOs;
-using Azure.Core;
-using static Dapper.SqlMapper;
 
 namespace MeetIQ.Infrastructure.Persistence.Repositories
 {

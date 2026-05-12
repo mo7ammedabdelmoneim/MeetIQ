@@ -1,5 +1,4 @@
-﻿using MeetIQ.Application.Common;
-using MeetIQ.Application.Common.Results;
+﻿using MeetIQ.Application.Common.Results;
 using MeetIQ.Application.Features.Users.DTOs;
 using MeetIQ.Application.Features.Users.Queries.GetUsersQuery;
 using MeetIQ.Application.Interfaces.Repositories;
@@ -37,7 +36,6 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
 
             if (user == null) return null;
 
-            // Counts via separate queries (SqlKata subqueries)
             user.MeetingsCount = await db.Query("Meetings")
                 .Where("HostId", userId)
                 .CountAsync<int>();

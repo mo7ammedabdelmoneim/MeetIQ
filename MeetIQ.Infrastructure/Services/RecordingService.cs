@@ -99,7 +99,7 @@ namespace MeetIQ.Infrastructure.Services
             return File.Exists(fullPath) ? fullPath : null;
         }
 
-        // ── Helpers ──────────────────────────────────────────────────────────
+        // Helpers 
 
         private static string GetExtension(string contentType, string fileName)
         {
@@ -112,7 +112,7 @@ namespace MeetIQ.Infrastructure.Services
                 "audio/wav" => ".wav",
                 _ => Path.GetExtension(fileName).ToLowerInvariant() is { Length: > 0 } ext
                          ? ext
-                         : ".webm"             // safe default
+                         : ".webm"             
             };
         }
     }

@@ -88,8 +88,6 @@ namespace MeetIQ.Infrastructure.Presistence.Repositories
                 .CountAsync<int>();
         }
 
-
-
         public async Task<List<TaskDueDto>> GetTasksDueBetweenAsync(DateTime from, DateTime to)
         {
             return (await db.Query("TaskItems")

@@ -31,6 +31,5 @@ namespace MeetIQ.Application.Interfaces.Repositories
         Task<List<UserSearchResultDto>> SearchUsersToInviteAsync(string term, Guid meetingId, string hostId, int limit);
 
         Task<Meeting> GetMeetingWithTranscription(Guid meetingId, CancellationToken ct);
-
     }
 }

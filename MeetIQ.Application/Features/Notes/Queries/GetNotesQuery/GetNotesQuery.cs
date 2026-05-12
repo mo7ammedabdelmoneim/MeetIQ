@@ -1,6 +1,4 @@
-﻿using MeetIQ.Application.Common;
-using MeetIQ.Application.Features.Notes.DTOs;
-using MediatR;
+﻿using MediatR;
 using MeetIQ.Application.Common.Results;
 
 namespace MeetIQ.Application.Features.Notes.Queries.GetNotesQuery
@@ -14,6 +12,4 @@ namespace MeetIQ.Application.Features.Notes.Queries.GetNotesQuery
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 12;
     }
-
-
 }

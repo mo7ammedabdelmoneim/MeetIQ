@@ -6,7 +6,6 @@ using MeetIQ.Application.Features.Notifications.Commands.MarkAsReadCommand;
 using MeetIQ.Application.Features.Notifications.Queries.GetNotificationsQuery;
 using MeetIQ.Application.Features.Notifications.Queries.GetUnreadCountQuery;
 using MeetIQ.Application.Features.Notifications.Queries.GetUserNotificationsQuery;
-using MeetIQ.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -53,8 +52,7 @@ namespace MeetIQ.Web.Controllers
             return Json(items);
         }
 
-        // AJAX – mark single as read, then redirect to ActionUrl
-        [HttpPost, ValidateAntiForgeryToken]
+       [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkAsRead(Guid id, string? returnUrl)
         {
             await mediator.Send(new MarkAsReadCommand
@@ -88,7 +86,6 @@ namespace MeetIQ.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // AJAX endpoint – returns unread badge count (JSON)
         [HttpGet]
         public async Task<IActionResult> UnreadCount()
         {

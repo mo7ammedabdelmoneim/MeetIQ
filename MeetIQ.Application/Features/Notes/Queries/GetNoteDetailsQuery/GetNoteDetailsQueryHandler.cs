@@ -23,7 +23,6 @@ namespace MeetIQ.Application.Features.Notes.Queries.GetNoteDetailsQuery
 
             if (note.AuthorId != request.RequesterId)
                 throw new BadRequestException("Access denied");
-            //throw new ForbiddenException("Access denied");
 
             return note;
         }

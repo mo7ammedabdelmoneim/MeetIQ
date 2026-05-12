@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using MeetIQ.Application.Features.Transcripts.Queries.GetTranscriptByIdQuery;
+﻿using MeetIQ.Application.Features.Transcripts.Queries.GetTranscriptByIdQuery;
 using MeetIQ.Application.Features.Transcripts.Queries.GetTranscriptsQuery;
 using MeetIQ.Application.Interfaces.Repositories;
 using MeetIQ.Domain.Entities;

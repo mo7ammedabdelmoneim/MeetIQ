@@ -10,7 +10,6 @@ namespace MeetIQ.Domain.Entities
         public string Title { get; set; } = null!;
         public string Message { get; set; } = null!;
 
-        // Optional deep-link (e.g. /Meetings/Details/{id})
         public string? ActionUrl { get; set; }
 
         public bool IsRead { get; set; }
@@ -24,7 +23,6 @@ namespace MeetIQ.Domain.Entities
         public Guid? ReferenceId { get; set; }
         public NotificationReferenceType? ReferenceType { get; set; }
 
-        // Navigation
         public ApplicationUser User { get; set; } = null!;
     }
 }

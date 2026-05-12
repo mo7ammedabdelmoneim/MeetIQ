@@ -1,7 +1,4 @@
-﻿
-
-
-namespace MeetIQ.Application.Features.SystemHealth.DTOs
+﻿namespace MeetIQ.Application.Features.SystemHealth.DTOs
 {
     public class RecentActivityDto
     {

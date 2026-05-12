@@ -1,5 +1,4 @@
-﻿using MeetIQ.Application.Common;
-using MeetIQ.Application.Common.Results;
+﻿using MeetIQ.Application.Common.Results;
 using MeetIQ.Application.Features.Feedback.DTOs;
 using MeetIQ.Application.Features.Feedback.Queries.GetFeedbacksQuery;
 using MeetIQ.Application.Features.Feedback.Queries.GetMyFeedbacksQuery;
