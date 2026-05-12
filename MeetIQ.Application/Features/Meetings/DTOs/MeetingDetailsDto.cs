@@ -1,5 +1,4 @@
 ﻿using MeetIQ.Domain.Enums;
-
 namespace MeetIQ.Application.Features.Meetings.DTOs
 {
     public class MeetingDetailsDto
@@ -17,10 +16,20 @@ namespace MeetIQ.Application.Features.Meetings.DTOs
         public string HostEmail { get; set; } = string.Empty;
         public string? HostAvatarUrl { get; set; }
         public int ParticipantsCount { get; set; }
+
+        // Transcript
         public bool HasTranscript { get; set; }
-        public bool HasSummary { get; set; }
         public Guid? TranscriptId { get; set; }
+        public TranscriptStatus? TranscriptStatus { get; set; }
+
+        // Summary
+        public bool HasSummary { get; set; }
         public Guid? SummaryId { get; set; }
+
+        // Recording
+        public bool HasRecording { get; set; }
+        public string? AudioFilePath { get; set; }
+
         public List<MeetingParticipantDto> Participants { get; set; } = [];
         public List<MeetingInvitationDto> Invitations { get; set; } = [];
 

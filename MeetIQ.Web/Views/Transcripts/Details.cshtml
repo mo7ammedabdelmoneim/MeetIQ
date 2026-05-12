@@ -1,0 +1,190 @@
+﻿@model TranscriptDetailsDto
+
+@{
+    ViewData["Title"] = "Transcript";
+    Layout = "_Layout";
+
+    var wordCount = string.IsNullOrWhiteSpace(Model.Text)
+        ? 0
+        : Model.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
+    var statusConfig = Model.Status switch
+    {
+        "Completed" => ("text-emerald-400 bg-emerald-400/10 border-emerald-400/20", "Completed"),
+        "Transcribing" => ("text-amber-400 bg-amber-400/10 border-amber-400/20", "Transcribing"),
+        "Failed" => ("text-red-400 bg-red-400/10 border-red-400/20", "Failed"),
+        _ => ("text-slate-400 bg-slate-400/10 border-slate-400/20", "Pending"),
+    };
+    var (statusColor, statusLabel) = statusConfig;
+}
+
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Breadcrumb -->
+    <div class="flex items-center gap-2 text-xs text-slate-500">
+        <a href="@Url.Action("Index", "Meetings")" class="hover:text-slate-300 transition-colors">Meetings</a>
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        <a href="@Url.Action("Details", "Meetings", new { id = Model.MeetingId })"
+           class="hover:text-slate-300 transition-colors truncate max-w-[180px]">@Model.MeetingTitle</a>
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        <span class="text-slate-400">Transcript</span>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                    <div class="w-9 h-9 rounded-xl bg-brand-600/20 border border-brand-600/30
+                                flex items-center justify-center shrink-0">
+                        <i data-lucide="mic-2" class="w-4 h-4 text-brand-400"></i>
+                    </div>
+                    <h1 class="text-lg font-semibold text-white">@Model.MeetingTitle — Transcript</h1>
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full border @statusColor">
+                        @statusLabel
+                    </span>
+                </div>
+                <div class="flex items-center gap-4 text-xs text-slate-500 flex-wrap mt-3">
+                    @if (!string.IsNullOrEmpty(Model.Language))
+                    {
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                            @Model.Language.ToUpper()
+                        </span>
+                    }
+                    <span class="flex items-center gap-1.5">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                        @wordCount words
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                        @Model.CreatedAt.ToLocalTime().ToString("MMM d, yyyy — HH:mm")
+                    </span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 shrink-0">
+                <button onclick="copyTranscript()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border
+                               text-slate-400 hover:text-white hover:border-brand-600 text-xs font-medium transition-colors">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    Copy
+                </button>
+                <a href="@Url.Action("Index", "Transcripts")"
+                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border
+                          text-slate-400 hover:text-white text-xs font-medium transition-colors">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                    Back to Transcripts
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transcript Text -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-surface-border">
+            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+                <i data-lucide="align-left" class="w-4 h-4 text-slate-500"></i>
+                Transcript Text
+            </h2>
+            <!-- Search -->
+            <div class="relative">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+                <input type="text"
+                       id="search-input"
+                       placeholder="Search in transcript…"
+                       oninput="highlightSearch(this.value)"
+                       class="pl-8 pr-3 py-1.5 bg-surface border border-surface-border rounded-lg
+                              text-xs text-slate-300 placeholder-slate-600
+                              focus:outline-none focus:border-brand-600 w-48" />
+            </div>
+        </div>
+
+        <div class="p-6">
+            @if (!string.IsNullOrWhiteSpace(Model.Text))
+            {
+                <div id="transcript-content"
+                     class="text-slate-300 text-sm leading-8 font-mono whitespace-pre-wrap break-words">
+                    @Model.Text
+                </div>
+            }
+            else
+            {
+                <div class="flex flex-col items-center justify-center py-12 text-slate-600">
+                    <i data-lucide="mic-off" class="w-8 h-8 mb-3"></i>
+                    <p class="text-sm">No transcript text available yet.</p>
+                    @if (Model.Status == "PendingTranscription")
+                    {
+                        <p class="text-xs mt-1">Go back to the meeting and click Transcribe.</p>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Stats row -->
+    @if (!string.IsNullOrWhiteSpace(Model.Text))
+    {
+        var sentences = Model.Text.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        var readingMin = (int)Math.Ceiling(wordCount / 200.0);
+
+        <div class="grid grid-cols-3 gap-4">
+            <div class="bg-surface-card border border-surface-border rounded-xl p-4 text-center">
+                <p class="text-2xl font-semibold text-white">@wordCount</p>
+                <p class="text-xs text-slate-500 mt-1">Words</p>
+            </div>
+            <div class="bg-surface-card border border-surface-border rounded-xl p-4 text-center">
+                <p class="text-2xl font-semibold text-white">@sentences</p>
+                <p class="text-xs text-slate-500 mt-1">Sentences</p>
+            </div>
+            <div class="bg-surface-card border border-surface-border rounded-xl p-4 text-center">
+                <p class="text-2xl font-semibold text-white">~@readingMin min</p>
+                <p class="text-xs text-slate-500 mt-1">Reading time</p>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Copy toast -->
+<div id="copy-toast"
+     class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5
+            rounded-xl bg-surface-card border border-emerald-500/30 text-emerald-400 text-sm
+            font-medium shadow-lg z-50 opacity-0 translate-y-2 transition-all duration-200 pointer-events-none">
+    <i data-lucide="check-circle" class="w-4 h-4"></i>
+    Transcript copied!
+</div>
+
+@section Scripts {
+    <script>
+        // ── Copy transcript ────────────────────────────────────────
+        function copyTranscript() {
+            const text = document.getElementById('transcript-content')?.innerText ?? '';
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.getElementById('copy-toast');
+                toast.classList.remove('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.classList.add('opacity-0', 'translate-y-2'), 2500);
+            });
+        }
+
+        // ── Search / highlight ─────────────────────────────────────
+        const originalText = document.getElementById('transcript-content')?.textContent ?? '';
+
+        function highlightSearch(term) {
+            const el = document.getElementById('transcript-content');
+            if (!el) return;
+
+            if (!term.trim()) {
+                el.textContent = originalText;
+                return;
+            }
+
+            const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex   = new RegExp(`(${escaped})`, 'gi');
+            el.innerHTML  = originalText.replace(
+                regex,
+                '<mark class="bg-brand-500/30 text-brand-200 rounded px-0.5">$1</mark>'
+            );
+        }
+    </script>
+}

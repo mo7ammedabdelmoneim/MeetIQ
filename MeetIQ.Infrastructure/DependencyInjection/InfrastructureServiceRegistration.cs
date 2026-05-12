@@ -10,6 +10,7 @@ using MeetIQ.Infrastructure.Identity;
 using MeetIQ.Infrastructure.Persistence.Repositories;
 using MeetIQ.Infrastructure.Presistence;
 using MeetIQ.Infrastructure.Presistence.Repositories;
+using MeetIQ.Infrastructure.Repositories;
 using MeetIQ.Infrastructure.Services;
 using MeetIQ.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Identity;
@@ -102,6 +103,8 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<IFeedbackRepository, FeedbackRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<ISystemHealthRepository, SystemHealthRepository>();
+            services.AddScoped<ITranscriptRepository, TranscriptRepository>();
+            services.AddScoped<ISummaryRepository, SummaryRepository>();
 
             // Services
             services.AddScoped<IAuthService, AuthService>();
@@ -109,11 +112,19 @@ namespace MeetIQ.Infrastructure.DependencyInjection
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFileStorageService, LocalFileStorageService>();
             services.AddScoped<IRecordingService, RecordingService>();
+            services.AddScoped<ITranscriptionService, WhisperTranscriptionService>();
             services.AddScoped<ITaskAssignmentValidator, TaskAssignmentValidator>();
-
-
-
+            services.AddHttpClient<IAnalysisService, GroqAnalysisService>();
+            services.AddScoped<ITranscriptionService, WhisperTranscriptionService>();
             services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
+            
+            
+            
+            // Options
+            services.Configure<WhisperOptions>(configuration.GetSection("Whisper"));
+            services.Configure<GroqOptions>(configuration.GetSection("Groq"));
+
+
 
             return services;
         }

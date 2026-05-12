@@ -1,8 +1,11 @@
 using Hangfire;
+using MeetIQ.Application.Common.Options;
 using MeetIQ.Application.DependencyInjection;
+using MeetIQ.Application.Interfaces.Services;
 using MeetIQ.Infrastructure.DependencyInjection;
 using MeetIQ.Infrastructure.Identity;
 using MeetIQ.Infrastructure.Jobs;
+using MeetIQ.Infrastructure.Services;
 using MeetIQ.Infrastructure.SignalR;
 using MeetIQ.Web.Infrastructure;
 
@@ -50,6 +53,7 @@ namespace MeetIQ.Web
                 options.Limits.MaxRequestBodySize = 500 * 1024 * 1024; // 500 MB
             });
 
+           
             builder.Services.AddScoped<TaskDueSoonJob>();
             builder.Services.AddScoped<TaskOverdueJob>();
             builder.Services.AddScoped<MeetingStartingSoonJob>();

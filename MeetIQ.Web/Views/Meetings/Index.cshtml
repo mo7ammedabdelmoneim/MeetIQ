@@ -1,4 +1,7 @@
-﻿@model PagedResult<MeetingListItemDto>
+﻿@using MeetIQ.Application.Features.Meetings.DTOs
+@using MeetIQ.Domain.Enums
+@using MeetIQ.Application.Common
+@model PagedResult<MeetingListItemDto>
 
 @{
     ViewData["Title"] = "Meetings";
@@ -12,11 +15,11 @@
 
     var live = Model.Items.Where(m => m.Status == MeetingStatus.InProgress).ToList();
     var missed = Model.Items.Where(m => m.Status == MeetingStatus.Scheduled && m.ScheduledAt < now)
-                             .OrderByDescending(m => m.ScheduledAt).ToList();
+                              .OrderByDescending(m => m.ScheduledAt).ToList();
     var upcoming = Model.Items.Where(m => m.Status == MeetingStatus.Scheduled && m.ScheduledAt >= now)
                               .OrderBy(m => m.ScheduledAt).ToList();
     var past = Model.Items.Where(m => m.Status == MeetingStatus.Ended || m.Status == MeetingStatus.Cancelled)
-                          .OrderByDescending(m => m.ScheduledAt).ToList();
+                              .OrderByDescending(m => m.ScheduledAt).ToList();
 
     bool hasFilters = currentStatus.HasValue
                    || !string.IsNullOrEmpty(currentSearch)
@@ -24,12 +27,6 @@
 }
 
 <style>
-    @@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
-
-    .meetings-root * {
-        font-family: 'DM Sans', system-ui, sans-serif;
-    }
-
     @@keyframes breathe {
         0%, 100% {
             opacity: .9;
@@ -179,8 +176,9 @@
     }
 </style>
 
-<div class="meetings-root space-y-6">
+<div class="space-y-6">
 
+    <!-- Header -->
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
             <h2 style="font-size:18px;font-weight:500;color:#f3f4f6;margin:0;">Meetings</h2>
@@ -204,7 +202,6 @@
                     @missed.Count Missed
                 </span>
             }
-
             <a asp-action="Create" class="btn-primary">
                 <i data-lucide="video" style="width:14px;height:14px;"></i>
                 New Meeting
@@ -212,14 +209,14 @@
         </div>
     </div>
 
+    <!-- Filters -->
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;">
         <form method="get" class="flex flex-wrap items-center gap-2.5">
 
             <div class="flex items-center gap-2.5 flex-1 min-w-52"
                  style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:8px 12px;">
                 <i data-lucide="search" style="width:13px;height:13px;color:#4b5563;flex-shrink:0;"></i>
-                <input type="text" name="search" value="@currentSearch" placeholder="Search meetings…"
-                       class="filter-input" />
+                <input type="text" name="search" value="@currentSearch" placeholder="Search meetings…" class="filter-input" />
             </div>
 
             <div style="position:relative;">
@@ -280,7 +277,8 @@
     }
     else
     {
-        @* @if (live.Any()) *@
+        <!-- ── Live Now ── -->
+        @if (live.Any())
         {
             <section>
                 <p class="section-label">Live now</p>
@@ -307,6 +305,7 @@
                                 </div>
                                 <p style="font-size:12px;color:#6b7280;margin:0;">
                                     @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
+                                    &nbsp;·&nbsp; @m.HostName
                                     &nbsp;·&nbsp; @m.ParticipantsCount participant@(m.ParticipantsCount != 1 ? "s" : "")
                                     @if (m.HasTranscript)
                                     {
@@ -336,6 +335,7 @@
             </section>
         }
 
+        <!-- ── Missed ── -->
         @if (missed.Any())
         {
             <section>
@@ -369,6 +369,7 @@
                                 </div>
                                 <p style="font-size:12px;color:#6b7280;margin:0;">
                                     Scheduled @m.ScheduledAt.ToLocalTime().ToString("MMM d · h:mm tt")
+                                    &nbsp;·&nbsp; @m.HostName
                                     &nbsp;·&nbsp; @m.ParticipantsCount participant@(m.ParticipantsCount != 1 ? "s" : "")
                                 </p>
                             </div>
@@ -390,6 +391,7 @@
             </section>
         }
 
+        <!-- ── Upcoming ── -->
         @if (upcoming.Any())
         {
             <section>
@@ -421,6 +423,7 @@
                                 </div>
                                 <p style="font-size:12px;color:#6b7280;margin:0;">
                                     @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
+                                    &nbsp;·&nbsp; @m.HostName
                                     &nbsp;·&nbsp; @m.ParticipantsCount participant@(m.ParticipantsCount != 1 ? "s" : "")
                                 </p>
                             </div>
@@ -437,7 +440,7 @@
                                 }
                                 else
                                 {
-                                    <span class="pill" style="background:rgba(37,99,235,.07);color:#60a5fa;border:1px solid rgba(37,99,235,.18);">Scheduled</span>
+                                    <span class="pill" style="background:rgba(37,99,235,.07);color:#60a5fa;border:1px solid rgba(37,99,235,.18);">Invited</span>
                                 }
                             </div>
                         </div>
@@ -446,6 +449,7 @@
             </section>
         }
 
+        <!-- ── Past ── -->
         @if (past.Any())
         {
             <section>
@@ -455,6 +459,9 @@
                     {
                         var isHost = m.HostId == userId;
                         var isCancelled = m.Status == MeetingStatus.Cancelled;
+                        var dur = m.StartedAt.HasValue && m.EndedAt.HasValue
+                        ? (TimeSpan?)(m.EndedAt.Value - m.StartedAt.Value)
+                        : null;
 
                         <div class="meeting-row flex items-center gap-3 px-3 py-3 cursor-pointer"
                              style="opacity:.6;"
@@ -479,7 +486,12 @@
                                 </div>
                                 <p style="font-size:12px;color:#4b5563;margin:0;">
                                     @m.ScheduledAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
+                                    &nbsp;·&nbsp; @m.HostName
                                     &nbsp;·&nbsp; @m.ParticipantsCount participant@(m.ParticipantsCount != 1 ? "s" : "")
+                                    @if (dur.HasValue)
+                                    {
+                                        <span>&nbsp;·&nbsp; @((int)dur.Value.TotalMinutes)m</span>
+                                    }
                                     @if (m.HasTranscript)
                                     {
                                         <span style="color:#059669;opacity:.7;">&nbsp;· Transcript</span>
@@ -507,6 +519,7 @@
             </section>
         }
 
+        <!-- Pagination -->
         @if (Model.TotalPages > 1)
         {
             <div class="flex items-center justify-between pt-2" style="border-top:1px solid rgba(255,255,255,.05);">
@@ -523,15 +536,6 @@
                         var pStart = Math.Max(1, Model.Page - 2);
                         var pEnd = Math.Min(Model.TotalPages, Model.Page + 2);
                     }
-                    @if (pStart > 1)
-                    {
-                        <a href="?page=1&search=@currentSearch&status=@((int?)currentStatus)"
-                           class="btn-ghost btn-sm" style="width:32px;justify-content:center;">1</a>
-                        @if (pStart > 2)
-                        {
-                            <span style="color:#374151;font-size:13px;padding:0 2px;">…</span>
-                        }
-                    }
                     @for (int i = pStart; i <= pEnd; i++)
                     {
                         if (i == Model.Page)
@@ -544,15 +548,6 @@
                             <a href="?page=@i&search=@currentSearch&status=@((int?)currentStatus)&from=@currentFrom&to=@currentTo"
                                class="btn-ghost btn-sm" style="width:32px;justify-content:center;">@i</a>
                         }
-                    }
-                    @if (pEnd < Model.TotalPages)
-                    {
-                        @if (pEnd < Model.TotalPages - 1)
-                        {
-                            <span style="color:#374151;font-size:13px;padding:0 2px;">…</span>
-                        }
-                        <a href="?page=@Model.TotalPages&search=@currentSearch&status=@((int?)currentStatus)"
-                           class="btn-ghost btn-sm" style="width:32px;justify-content:center;">@Model.TotalPages</a>
                     }
                     @if (Model.Page < Model.TotalPages)
                     {

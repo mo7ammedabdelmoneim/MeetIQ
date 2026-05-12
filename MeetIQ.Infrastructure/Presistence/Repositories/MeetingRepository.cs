@@ -9,6 +9,8 @@ using MeetIQ.Infrastructure.Presistence;
 using SqlKata.Execution;
 using Microsoft.EntityFrameworkCore;
 using MeetIQ.Application.Features.Notifications.Job.DTOs;
+using Azure.Core;
+using static Dapper.SqlMapper;
 
 namespace MeetIQ.Infrastructure.Persistence.Repositories
 {
@@ -33,10 +35,13 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                     "u.Email as HostEmail",
                     "u.AvatarUrl as HostAvatarUrl",
                     "tr.Id as TranscriptId",
+                    "tr.Status as TranscriptStatus",
+                    "tr.AudioFilePath as AudioFilePath",
                     "sm.Id as SummaryId"
                 )
                 .SelectRaw("CASE WHEN tr.Id IS NOT NULL THEN 1 ELSE 0 END as HasTranscript")
                 .SelectRaw("CASE WHEN sm.Id IS NOT NULL THEN 1 ELSE 0 END as HasSummary")
+                .SelectRaw("CASE WHEN tr.AudioFilePath IS NOT NULL THEN 1 ELSE 0 END as HasRecording")
                 .Where("m.Id", id)
                 .FirstOrDefaultAsync<MeetingDetailsDto>();
 
@@ -119,6 +124,7 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 )
                 .SelectRaw("CASE WHEN tr.Id IS NOT NULL THEN 1 ELSE 0 END as HasTranscript")
                 .SelectRaw("CASE WHEN sm.Id IS NOT NULL THEN 1 ELSE 0 END as HasSummary")
+                .SelectRaw("CASE WHEN tr.AudioFilePath IS NOT NULL THEN 1 ELSE 0 END as HasRecording")
                 .SelectRaw("(SELECT COUNT(*) FROM MeetingParticipants WHERE MeetingId = m.Id) as ParticipantsCount")
                 .GetAsync<MeetingListItemDto>();
 
@@ -167,7 +173,6 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
             context.Set<MeetingParticipant>().Update(participant);
         }
 
-
         public async Task MarkAllParticipantsLeftAsync(Guid meetingId, DateTime leftAt)
         {
             await context.Set<MeetingParticipant>()
@@ -175,21 +180,16 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 .ExecuteUpdateAsync(s => s.SetProperty(p => p.LeftAt, leftAt));
         }
 
-
-
         public async Task<List<MeetingStartingDto>> GetMeetingsStartingBetweenAsync(DateTime from, DateTime to)
         {
-            // Get meetings
             var meetings = (await db.Query("Meetings as m")
                 .WhereBetween("m.ScheduledAt", from, to)
                 .Where("m.Status", (int)MeetingStatus.Scheduled)
-                //.Where("m.IsDeleted", false)
                 .Select("m.Id", "m.Title", "m.HostId", "m.ScheduledAt")
                 .GetAsync<MeetingStartingDto>()).ToList();
 
             if (!meetings.Any()) return meetings;
 
-            // Get participants for each meeting
             var meetingIds = meetings.Select(m => m.Id).ToList();
 
             var participants = (await db.Query("MeetingParticipants")
@@ -217,13 +217,10 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 .Where("ReferenceId", meetingId)
                 .Where("Type", (int)type)
                 .Where("CreatedAt", ">", since)
-                //.Where("IsDeleted", false)
                 .CountAsync<int>();
 
             return count > 0;
         }
-
-
 
         public async Task<MeetingInvitation?> GetInvitationAsync(Guid meetingId, string userId)
         {
@@ -309,6 +306,11 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
 
             return items.ToList();
         }
+
+        public Task<Meeting?> GetMeetingWithTranscription(Guid meetingId, CancellationToken ct)
+        {
+            return context.Meetings.Include(m => m.Transcript)
+                    .FirstOrDefaultAsync(m => m.Id == meetingId, ct);
+        }
     }
 }
-

@@ -1,0 +1,118 @@
+﻿@model List<TranscriptListItemDto>
+
+@{
+    ViewData["Title"] = "Transcripts";
+    Layout = "_Layout";
+}
+
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-semibold text-white">Transcripts</h1>
+            <p class="text-sm text-slate-500 mt-1">Audio transcriptions from your meetings</p>
+        </div>
+        <span class="text-xs text-slate-600 bg-surface-card border border-surface-border
+                     px-3 py-1.5 rounded-lg font-mono">
+            @Model.Count transcript@(Model.Count != 1 ? "s" : "")
+        </span>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-surface-card border border-surface-border
+                        flex items-center justify-center mb-4">
+                <i data-lucide="mic-off" class="w-6 h-6 text-slate-600"></i>
+            </div>
+            <p class="text-slate-400 font-medium">No transcripts yet</p>
+            <p class="text-slate-600 text-sm mt-1">Record a meeting and transcribe it to see it here.</p>
+            <a href="@Url.Action("Index", "Meetings")"
+               class="mt-4 flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500
+                      text-white text-sm font-semibold rounded-xl transition-colors">
+                <i data-lucide="video" class="w-4 h-4"></i>
+                Go to Meetings
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+            <div class="divide-y divide-surface-border">
+                @foreach (var item in Model)
+                {
+                    var (statusColor, statusLabel, statusIcon, isSpinning) = item.Status switch
+                    {
+                        TranscriptStatus.Completed => ("text-emerald-400 bg-emerald-400/10 border-emerald-400/20", "Completed", "check-circle", false),
+                        TranscriptStatus.Transcribing => ("text-amber-400 bg-amber-400/10 border-amber-400/20", "Processing", "loader", true),
+                        TranscriptStatus.Failed => ("text-red-400 bg-red-400/10 border-red-400/20", "Failed", "alert-circle", false),
+                        _ => ("text-slate-400 bg-slate-400/10 border-slate-400/20", "Pending", "clock", false),
+                    };
+
+                    <div class="flex items-center justify-between px-5 py-4 hover:bg-surface-hover transition-colors">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <div class="w-9 h-9 rounded-xl bg-brand-600/20 border border-brand-600/30
+                                        flex items-center justify-center shrink-0">
+                                <i data-lucide="mic-2" class="w-4 h-4 text-brand-400"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-white truncate">@item.MeetingTitle</p>
+                                <div class="flex items-center gap-3 mt-1 flex-wrap">
+                                    <span class="text-xs text-slate-500">
+                                        @item.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(item.Language))
+                                    {
+                                        <span class="text-xs text-slate-600">@item.Language.ToUpper()</span>
+                                    }
+                                    @if (item.WordCount > 0)
+                                    {
+                                        <span class="text-xs text-slate-600">@item.WordCount words</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold
+                                         px-2.5 py-1 rounded-full border @statusColor">
+                                <i data-lucide="@statusIcon" class="w-3 h-3 @(isSpinning ? "animate-spin" : "")"></i>
+                                @statusLabel
+                            </span>
+
+                            @if (item.Status == TranscriptStatus.Completed)
+                            {
+                                <a href="@Url.Action("Details", new { id = item.Id })"
+                                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                                          bg-brand-600/20 hover:bg-brand-600/30 border border-brand-600/30
+                                          text-brand-400 text-xs font-semibold transition-colors">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                    View
+                                </a>
+                            }
+                            else if (item.Status == TranscriptStatus.Failed)
+                            {
+                                <a href="@Url.Action("Details", "Meetings", new { id = item.MeetingId })"
+                                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30
+                                          text-red-400 hover:bg-red-500/10 text-xs font-medium transition-colors">
+                                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                    Retry
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="@Url.Action("Details", "Meetings", new { id = item.MeetingId })"
+                                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border
+                                          text-slate-400 hover:text-white text-xs font-medium transition-colors">
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                    Meeting
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

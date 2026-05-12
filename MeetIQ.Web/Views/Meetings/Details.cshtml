@@ -9,13 +9,114 @@
 
     var statusConfig = new Dictionary<MeetingStatus, (string Label, string Color)>
     {
-        { MeetingStatus.Scheduled,  ("Scheduled",  "text-brand-400 bg-brand-400/10 border-brand-400/20")        },
-        { MeetingStatus.InProgress, ("Live",        "text-emerald-400 bg-emerald-400/10 border-emerald-400/20")  },
-        { MeetingStatus.Ended,      ("Ended",       "text-slate-400 bg-slate-400/10 border-slate-400/20")        },
-        { MeetingStatus.Cancelled,  ("Cancelled",   "text-red-400 bg-red-400/10 border-red-400/20")              },
+        { MeetingStatus.Scheduled,  ("Scheduled",  "text-brand-400 bg-brand-400/10 border-brand-400/20")       },
+        { MeetingStatus.InProgress, ("Live",        "text-emerald-400 bg-emerald-400/10 border-emerald-400/20") },
+        { MeetingStatus.Ended,      ("Ended",       "text-slate-400 bg-slate-400/10 border-slate-400/20")       },
+        { MeetingStatus.Cancelled,  ("Cancelled",   "text-red-400 bg-red-400/10 border-red-400/20")             },
     };
     var (statusLabel, statusColor) = statusConfig[Model.Status];
+
+    var transcriptDone    = Model.TranscriptStatus == TranscriptStatus.Completed;
+    var transcriptRunning = Model.TranscriptStatus == TranscriptStatus.Transcribing;
+    var transcriptFailed  = Model.TranscriptStatus == TranscriptStatus.Failed;
+    var transcriptPending = Model.TranscriptStatus == TranscriptStatus.PendingTranscription;
 }
+
+<!-- ══════════════════════════════════════════
+     TRANSCRIBE OVERLAY
+══════════════════════════════════════════ -->
+<div id="transcribe-overlay"
+     class="hidden fixed inset-0 z-50 bg-surface/90 backdrop-blur-sm
+            flex flex-col items-center justify-center gap-4">
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-8
+                flex flex-col items-center gap-5 w-80 shadow-2xl">
+
+        <!-- Animated mic icon -->
+        <div class="relative flex items-center justify-center w-16 h-16">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-brand-500/20 animate-ping"></span>
+            <div class="relative w-14 h-14 rounded-full bg-brand-600/20 border border-brand-600/40
+                        flex items-center justify-center">
+                <i data-lucide="mic-2" class="w-6 h-6 text-brand-400"></i>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <p class="text-white font-semibold text-sm">Transcribing Audio…</p>
+            <p class="text-slate-500 text-xs mt-1.5 leading-relaxed">
+                Whisper is converting your recording to text.<br/>This may take a minute.
+            </p>
+        </div>
+
+        <!-- Progress bar (indeterminate) -->
+        <div class="w-full bg-surface-border rounded-full h-1 overflow-hidden">
+            <div class="h-1 bg-brand-500 rounded-full animate-[progress_2s_ease-in-out_infinite]"
+                 style="width: 40%"></div>
+        </div>
+
+        <p class="text-slate-600 text-[11px]">Please don't close this tab</p>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ANALYZE OVERLAY
+══════════════════════════════════════════ -->
+<div id="analyze-overlay"
+     class="hidden fixed inset-0 z-50 bg-surface/90 backdrop-blur-sm
+            flex flex-col items-center justify-center gap-4">
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-8
+                flex flex-col items-center gap-5 w-80 shadow-2xl">
+
+        <!-- Animated sparkles icon -->
+        <div class="relative flex items-center justify-center w-16 h-16">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-violet-500/20 animate-ping"></span>
+            <div class="relative w-14 h-14 rounded-full bg-violet-600/20 border border-violet-600/40
+                        flex items-center justify-center">
+                <i data-lucide="sparkles" class="w-6 h-6 text-violet-400"></i>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <p class="text-white font-semibold text-sm">Analyzing with AI…</p>
+            <p class="text-slate-500 text-xs mt-1.5 leading-relaxed">
+                Groq is generating your summary,<br/>tasks, and notes.
+            </p>
+        </div>
+
+        <!-- Steps indicator -->
+        <div class="w-full space-y-2">
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+                <div class="w-4 h-4 rounded-full bg-violet-500/20 border border-violet-500/30
+                            flex items-center justify-center shrink-0">
+                    <i data-lucide="check" class="w-2.5 h-2.5 text-violet-400"></i>
+                </div>
+                Reading transcript
+            </div>
+            <div id="step-summary" class="flex items-center gap-2 text-xs text-slate-600">
+                <div class="w-4 h-4 rounded-full bg-surface-border flex items-center justify-center shrink-0">
+                    <svg class="animate-spin w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                </div>
+                Generating summary & insights
+            </div>
+            <div id="step-tasks" class="flex items-center gap-2 text-xs text-slate-600">
+                <div class="w-4 h-4 rounded-full bg-surface-border flex items-center justify-center shrink-0">
+                    <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                </div>
+                Extracting tasks & notes
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="w-full bg-surface-border rounded-full h-1 overflow-hidden">
+            <div class="h-1 bg-violet-500 rounded-full animate-[progress_2.5s_ease-in-out_infinite]"
+                 style="width: 35%"></div>
+        </div>
+
+        <p class="text-slate-600 text-[11px]">Please don't close this tab</p>
+    </div>
+</div>
 
 <div class="max-w-3xl mx-auto space-y-6">
 
@@ -34,8 +135,16 @@
             @TempData["Success"]
         </div>
     }
+    @if (TempData["Error"] != null)
+    {
+        <div class="flex items-center gap-3 px-4 py-3 rounded-xl
+                    bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+            @TempData["Error"]
+        </div>
+    }
 
-    <!-- Header Card -->
+    <!-- ── HEADER CARD ── -->
     <div class="bg-surface-card border border-surface-border rounded-2xl p-6">
         <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
@@ -52,10 +161,7 @@
                                 @statusLabel
                             </span>
                         }
-                        else
-                        {
-                            @statusLabel
-                        }
+                        else { @statusLabel }
                     </span>
                     @if (isHost)
                     {
@@ -63,6 +169,7 @@
                                      text-violet-400 bg-violet-400/10 border-violet-400/20">Host</span>
                     }
                 </div>
+
                 <div class="space-y-2 text-sm text-slate-500">
                     <div class="flex items-center gap-2">
                         <i data-lucide="calendar" class="w-4 h-4 shrink-0"></i>
@@ -137,38 +244,109 @@
         </div>
     </div>
 
-    <!-- Info Row -->
+    <!-- ── INFO ROW: Recording · Transcript · Summary ── -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        <!-- Recording -->
         <div class="bg-surface-card border border-surface-border rounded-xl p-4">
-            <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Host</p>
-            <div class="flex items-center gap-3">
-                @if (!string.IsNullOrEmpty(Model.HostAvatarUrl))
+            <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Recording</p>
+            @if (Model.HasRecording)
+            {
+                <div class="flex items-center gap-2 text-sm text-emerald-400 mb-3">
+                    <i data-lucide="circle-check" class="w-4 h-4 shrink-0"></i>
+                    Audio saved
+                </div>
+                @if (isHost && !transcriptDone && !transcriptRunning)
                 {
-                    <img src="@Model.HostAvatarUrl" class="w-8 h-8 rounded-full object-cover shrink-0" />
+                    <form id="transcribe-form" asp-action="Transcribe" method="post"
+                          onsubmit="showOverlay('transcribe-overlay')">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="meetingId" value="@Model.Id" />
+                        <button type="submit"
+                                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg
+                                       bg-brand-600/20 hover:bg-brand-600/30 border border-brand-600/30
+                                       text-brand-400 text-xs font-semibold transition-colors">
+                            <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                            @(transcriptFailed ? "Retry Transcription" : "Transcribe")
+                        </button>
+                    </form>
                 }
-                else
+                @if (transcriptRunning)
                 {
-                    <div class="w-8 h-8 rounded-full bg-brand-900 border border-brand-700
-                                flex items-center justify-center text-brand-300 text-xs font-semibold shrink-0">
-                        @Model.HostName.Substring(0, 1).ToUpper()
+                    <div class="flex items-center gap-2 text-xs text-amber-400 mt-1">
+                        <svg class="animate-spin w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                        Transcribing…
                     </div>
                 }
-                <div class="min-w-0">
-                    <p class="text-sm font-medium text-white truncate">@Model.HostName</p>
-                    <p class="text-xs text-slate-500 truncate">@Model.HostEmail</p>
-                </div>
-            </div>
+            }
+            else if (Model.Status == MeetingStatus.Ended)
+            {
+                <p class="text-sm text-slate-600 flex items-center gap-2">
+                    <i data-lucide="mic-off" class="w-4 h-4"></i>
+                    No recording
+                </p>
+            }
+            else
+            {
+                <p class="text-sm text-slate-600 flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                    Not started
+                </p>
+            }
         </div>
 
+        <!-- Transcript -->
         <div class="bg-surface-card border border-surface-border rounded-xl p-4">
             <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Transcript</p>
-            @if (Model.HasTranscript)
+            @if (transcriptDone && Model.TranscriptId.HasValue)
             {
                 <a href="@Url.Action("Details", "Transcripts", new { id = Model.TranscriptId })"
-                   class="flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 transition-colors">
+                   class="flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 transition-colors mb-3">
                     <i data-lucide="mic-2" class="w-4 h-4"></i>
                     View Transcript
                 </a>
+                @if (!Model.HasSummary && isHost)
+                {
+                    <form id="analyze-form" asp-action="Analyze" method="post"
+                          onsubmit="showOverlay('analyze-overlay'); startAnalyzeSteps()">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="meetingId" value="@Model.Id" />
+                        <button type="submit"
+                                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg
+                                       bg-violet-600/20 hover:bg-violet-600/30 border border-violet-600/30
+                                       text-violet-400 text-xs font-semibold transition-colors">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            Analyze Meeting
+                        </button>
+                    </form>
+                }
+            }
+            else if (transcriptRunning)
+            {
+                <div class="flex items-center gap-2 text-xs text-amber-400">
+                    <svg class="animate-spin w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    Whisper is working…
+                </div>
+            }
+            else if (transcriptFailed)
+            {
+                <p class="text-sm text-red-400 flex items-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                    Transcription failed
+                </p>
+            }
+            else if (transcriptPending)
+            {
+                <p class="text-sm text-slate-500 flex items-center gap-2">
+                    <i data-lucide="hourglass" class="w-4 h-4"></i>
+                    Pending
+                </p>
             }
             else
             {
@@ -179,9 +357,10 @@
             }
         </div>
 
+        <!-- Summary -->
         <div class="bg-surface-card border border-surface-border rounded-xl p-4">
             <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">AI Summary</p>
-            @if (Model.HasSummary)
+            @if (Model.HasSummary && Model.SummaryId.HasValue)
             {
                 <a href="@Url.Action("Details", "Summaries", new { id = Model.SummaryId })"
                    class="flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition-colors">
@@ -189,17 +368,46 @@
                     View Summary
                 </a>
             }
+            else if (transcriptDone)
+            {
+                <p class="text-sm text-slate-500 flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                    Not generated yet
+                </p>
+            }
             else
             {
                 <p class="text-sm text-slate-600 flex items-center gap-2">
                     <i data-lucide="sparkles" class="w-4 h-4"></i>
-                    Not generated
+                    Needs transcript first
                 </p>
             }
         </div>
     </div>
 
-    <!-- Participants -->
+    <!-- ── HOST INFO ── -->
+    <div class="bg-surface-card border border-surface-border rounded-xl p-4">
+        <p class="text-xs text-slate-600 uppercase tracking-wider mb-3">Host</p>
+        <div class="flex items-center gap-3">
+            @if (!string.IsNullOrEmpty(Model.HostAvatarUrl))
+            {
+                <img src="@Model.HostAvatarUrl" class="w-8 h-8 rounded-full object-cover shrink-0" />
+            }
+            else
+            {
+                <div class="w-8 h-8 rounded-full bg-brand-900 border border-brand-700
+                            flex items-center justify-center text-brand-300 text-xs font-semibold shrink-0">
+                    @Model.HostName.Substring(0, 1).ToUpper()
+                </div>
+            }
+            <div class="min-w-0">
+                <p class="text-sm font-medium text-white truncate">@Model.HostName</p>
+                <p class="text-xs text-slate-500 truncate">@Model.HostEmail</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── PARTICIPANTS ── -->
     @if (Model.Participants.Any())
     {
         <div class="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
@@ -213,8 +421,8 @@
                 @foreach (var p in Model.Participants)
                 {
                     var duration = p.LeftAt.HasValue
-                    ? $"{(int)(p.LeftAt.Value - p.JoinedAt).TotalMinutes}m"
-                    : "Still in";
+                        ? $"{(int)(p.LeftAt.Value - p.JoinedAt).TotalMinutes}m"
+                        : "Still in";
 
                     <div class="flex items-center justify-between px-5 py-3.5">
                         <div class="flex items-center gap-3">
@@ -236,9 +444,7 @@
                         </div>
                         <div class="text-right">
                             <p class="text-xs text-slate-500">@p.JoinedAt.ToLocalTime().ToString("HH:mm")</p>
-                            <p class="text-xs @(p.LeftAt.HasValue ? "text-slate-600" : "text-emerald-500")">
-                                @duration
-                            </p>
+                            <p class="text-xs @(p.LeftAt.HasValue ? "text-slate-600" : "text-emerald-500")">@duration</p>
                         </div>
                     </div>
                 }
@@ -248,22 +454,47 @@
 
     @if (isHost)
     {
-        <!-- Invite Panel -->
         @await Html.PartialAsync("_InvitePanel", Model)
     }
-
 </div>
 
 @section Scripts {
+    <style>
+        @@keyframes progress {
+            0%   { width: 5%;  margin-left: 0; }
+            50%  { width: 50%; margin-left: 25%; }
+            100% { width: 5%;  margin-left: 95%; }
+        }
+    </style>
+
     <script>
         const CSRF_TOKEN = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
         const MEETING_ID = '@Model.Id';
+
+        // ── Overlay helper ─────────────────────────────────────────
+        function showOverlay(id) {
+            document.getElementById(id)?.classList.remove('hidden');
+        }
+
+        // ── Animate analyze steps ──────────────────────────────────
+        function startAnalyzeSteps() {
+            // Step 2 activates after 3s
+            setTimeout(() => {
+                const s = document.getElementById('step-summary');
+                if (s) s.classList.replace('text-slate-600', 'text-violet-400');
+            }, 3000);
+
+            // Step 3 activates after 6s
+            setTimeout(() => {
+                const s = document.getElementById('step-tasks');
+                if (s) s.classList.replace('text-slate-600', 'text-violet-400');
+            }, 6000);
+        }
 
         // ── Toggle invite box ──────────────────────────────────────
         function toggleInviteBox() {
             const box = document.getElementById('invite-box');
             const btn = document.getElementById('invite-toggle-btn');
-
             if (!box) return;
 
             const isHidden = box.classList.contains('hidden');
@@ -278,35 +509,30 @@
                 btn.innerHTML = '<i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Invite Someone';
                 btn.classList.add('bg-brand-600', 'hover:bg-brand-500', 'shadow-glow');
                 btn.classList.remove('bg-surface-hover', 'border', 'border-surface-border', 'text-slate-400');
-                // reset search
                 const searchInput = document.getElementById('invite-search');
-                const resultsBox = document.getElementById('invite-results');
+                const resultsBox  = document.getElementById('invite-results');
                 if (searchInput) searchInput.value = '';
-                if (resultsBox) { resultsBox.classList.add('hidden'); resultsBox.innerHTML = ''; }
+                if (resultsBox)  { resultsBox.classList.add('hidden'); resultsBox.innerHTML = ''; }
             }
-
             lucide.createIcons();
         }
 
         // ── Search wiring ──────────────────────────────────────────
         const searchInput = document.getElementById('invite-search');
-        const resultsBox = document.getElementById('invite-results');
-        const loadingEl = document.getElementById('invite-loading');
+        const resultsBox  = document.getElementById('invite-results');
+        const loadingEl   = document.getElementById('invite-loading');
 
         if (searchInput) {
             let debounce = null;
-
             searchInput.addEventListener('input', () => {
                 clearTimeout(debounce);
                 const term = searchInput.value.trim();
-
                 if (term.length < 2) {
                     resultsBox.classList.add('hidden');
                     loadingEl?.classList.add('hidden');
                     resultsBox.innerHTML = '';
                     return;
                 }
-
                 loadingEl?.classList.remove('hidden');
                 resultsBox.classList.add('hidden');
                 debounce = setTimeout(() => fetchUsers(term), 300);
@@ -321,58 +547,50 @@
         // ── Fetch users ────────────────────────────────────────────
         async function fetchUsers(term) {
             try {
-                const res = await fetch(`/Meetings/SearchUsers?term=${encodeURIComponent(term)}&meetingId=${MEETING_ID}`);
+                const res  = await fetch(`/Meetings/SearchUsers?term=${encodeURIComponent(term)}&meetingId=${MEETING_ID}`);
                 const data = await res.json();
-
                 loadingEl?.classList.add('hidden');
 
                 if (!data.length) {
                     resultsBox.innerHTML = `
-                            <div class="flex items-center gap-2 px-4 py-3 text-xs text-slate-500">
-                                <i data-lucide="search-x" class="w-3.5 h-3.5 shrink-0"></i>
-                                No users found matching
-                                "<strong class="text-slate-400">${escapeHtml(term)}</strong>"
-                            </div>`;
+                        <div class="flex items-center gap-2 px-4 py-3 text-xs text-slate-500">
+                            <i data-lucide="search-x" class="w-3.5 h-3.5 shrink-0"></i>
+                            No users found matching "<strong class="text-slate-400">${escapeHtml(term)}</strong>"
+                        </div>`;
                     resultsBox.classList.remove('hidden');
                     lucide.createIcons();
                     return;
                 }
 
                 resultsBox.innerHTML = data.map(u => `
-                        <div class="flex items-center justify-between px-4 py-3
-                                    hover:bg-surface-hover transition-colors
-                                    border-b border-surface-border last:border-0">
-                            <div class="flex items-center gap-3 min-w-0">
-                                ${u.avatarUrl
-                        ? `<img src="${escapeHtml(u.avatarUrl)}"
-                                            class="w-8 h-8 rounded-full object-cover shrink-0" />`
-                        : `<div class="w-8 h-8 rounded-full bg-surface-card border border-surface-border
-                                                  flex items-center justify-center text-slate-400 text-xs font-semibold shrink-0">
-                                         ${escapeHtml(u.fullName.charAt(0).toUpperCase())}
-                                       </div>`
-                    }
-                                <div class="min-w-0">
-                                    <p class="text-sm text-white font-medium truncate">${escapeHtml(u.fullName)}</p>
-                                    <p class="text-xs text-slate-500 truncate">${escapeHtml(u.email)}</p>
-                                </div>
+                    <div class="flex items-center justify-between px-4 py-3
+                                hover:bg-surface-hover transition-colors
+                                border-b border-surface-border last:border-0">
+                        <div class="flex items-center gap-3 min-w-0">
+                            ${u.avatarUrl
+                                ? `<img src="${escapeHtml(u.avatarUrl)}" class="w-8 h-8 rounded-full object-cover shrink-0" />`
+                                : `<div class="w-8 h-8 rounded-full bg-surface-card border border-surface-border
+                                              flex items-center justify-center text-slate-400 text-xs font-semibold shrink-0">
+                                     ${escapeHtml(u.fullName.charAt(0).toUpperCase())}
+                                   </div>`}
+                            <div class="min-w-0">
+                                <p class="text-sm text-white font-medium truncate">${escapeHtml(u.fullName)}</p>
+                                <p class="text-xs text-slate-500 truncate">${escapeHtml(u.email)}</p>
                             </div>
-                            <button data-user-id="${escapeHtml(u.id)}"
-                                    class="invite-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                                           bg-brand-600 hover:bg-brand-500 text-white
-                                           text-xs font-semibold transition-colors shrink-0">
-                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                                Send Invite
-                            </button>
                         </div>
-                    `).join('');
+                        <button data-user-id="${escapeHtml(u.id)}"
+                                class="invite-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                                       bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-colors shrink-0">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            Send Invite
+                        </button>
+                    </div>`).join('');
 
                 resultsBox.classList.remove('hidden');
                 lucide.createIcons();
-
-             resultsBox.querySelectorAll('.invite-btn').forEach(btn => {
+                resultsBox.querySelectorAll('.invite-btn').forEach(btn => {
                     btn.addEventListener('click', () => inviteUser(btn.dataset.userId, btn));
                 });
-
             } catch (err) {
                 loadingEl?.classList.add('hidden');
                 console.error('Search failed:', err);
@@ -383,53 +601,43 @@
         async function inviteUser(userId, btn) {
             btn.disabled = true;
             btn.innerHTML = `<svg class="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg> Sending...`;
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg> Sending...`;
 
             try {
                 const formData = new FormData();
                 formData.append('meetingId', MEETING_ID);
                 formData.append('invitedUserId', userId);
-                // ✅ الـ token بييجي من الـ global constant — مش من parameter
                 formData.append('__RequestVerificationToken', CSRF_TOKEN);
 
                 const res = await fetch('/Meetings/Invite', { method: 'POST', body: formData });
-
                 if (res.ok || res.redirected) {
                     window.location.reload();
                 } else {
                     throw new Error(`HTTP ${res.status}`);
                 }
-
             } catch (err) {
                 console.error('Invite failed:', err);
                 btn.disabled = false;
                 btn.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5"></i> Send Invite';
                 lucide.createIcons();
-
-                // error toast
                 showToast('Failed to send invitation. Please try again.', 'error');
             }
         }
 
-        // ── Toast helper ───────────────────────────────────────────
+        // ── Toast ──────────────────────────────────────────────────
         function showToast(message, type = 'success') {
             const colors = type === 'error'
                 ? 'bg-red-500/10 border-red-500/30 text-red-400'
                 : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
-
             const toast = document.createElement('div');
             toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2
-                                   px-4 py-2.5 rounded-xl border text-sm font-medium shadow-lg z-50
-                                   transition-all duration-200 opacity-0 translate-y-2 ${colors}`;
+                               px-4 py-2.5 rounded-xl border text-sm font-medium shadow-lg z-50
+                               transition-all duration-200 opacity-0 translate-y-2 ${colors}`;
             toast.textContent = message;
             document.body.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.classList.remove('opacity-0', 'translate-y-2');
-            });
-
+            requestAnimationFrame(() => toast.classList.remove('opacity-0', 'translate-y-2'));
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 200);
@@ -439,10 +647,8 @@
         // ── XSS protection ─────────────────────────────────────────
         function escapeHtml(str) {
             return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
     </script>

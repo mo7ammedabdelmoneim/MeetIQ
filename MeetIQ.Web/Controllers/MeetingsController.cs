@@ -18,6 +18,8 @@ using MeetIQ.Application.Features.Meetings.Commands.RespondToInvitationCommand;
 using MeetIQ.Application.Features.Meetings.Commands.RevokeInvitationCommand;
 using MeetIQ.Application.Features.Meetings.Queries.SearchUsersToInviteQuery;
 using MeetIQ.Application.Features.Meetings.Queries.GetUserPendingInvitationsQuery;
+using MeetIQ.Application.Features.Transcripts.Commands.TranscribeMeetingCommand;
+using MeetIQ.Application.Features.Meetings.Commands.AnalyzeMeetingCommand;
 
 namespace MeetIQ.Web.Controllers
 {
@@ -331,6 +333,47 @@ namespace MeetIQ.Web.Controllers
             });
 
             TempData["Success"] = "Meeting ended.";
+            return RedirectToAction(nameof(Details), new { id = meetingId });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Transcribe(Guid meetingId)
+        {
+            var meeting = await mediator.Send(new GetMeetingByIdQuery { MeetingId = meetingId });
+            if (meeting == null) return NotFound();
+
+            // Host only
+            if (meeting.HostId != CurrentUserId)
+                return Forbid();
+
+            var result = await mediator.Send(new TranscribeMeetingCommand
+            {
+                MeetingId = meetingId,
+                RequestedByUserId = CurrentUserId
+            });
+
+            if (result.Success)
+                TempData["Success"] = "Transcription completed successfully!";
+            else
+                TempData["Error"] = $"Transcription failed: {result.Error}";
+
+            return RedirectToAction(nameof(Details), new { id = meetingId });
+        }
+
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Analyze(Guid meetingId)
+        {
+            var result = await mediator.Send(new AnalyzeMeetingCommand
+            {
+                MeetingId = meetingId,
+                RequestedByUserId = CurrentUserId
+            });
+
+            TempData[result.Success ? "Success" : "Error"] = result.Success
+                ? "AI analysis complete! Summary, tasks, and notes have been generated."
+                : $"Analysis failed: {result.Error}";
+
             return RedirectToAction(nameof(Details), new { id = meetingId });
         }
     }

@@ -21,7 +21,6 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
 
             var totalMeetings = await db.Query("Meetings")
                 .Where("HostId", userId)
-                //.Where("IsDeleted", false)
                 .CountAsync<int>();
 
             var upcomingCount = await db.Query("Meetings as m")
@@ -30,13 +29,15 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                     .Where("m.HostId", userId)
                     .OrWhere("mp.UserId", userId))
                 .Where("m.ScheduledAt", ">", now)
-                //.Where("m.IsDeleted", false)
                 .CountAsync<int>();
 
+            // owned OR assigned
             var pendingTasks = await db.Query("TaskItems")
-                .Where("UserId", userId)
-                .Where("Status", 0) // ToDo
                 .Where("IsDeleted", false)
+                .Where("Status", 0) // ToDo
+                .Where(q => q
+                    .Where("UserId", userId)
+                    .OrWhere("AssigneeId", userId))
                 .CountAsync<int>();
 
             var totalNotes = await db.Query("Notes")
@@ -44,10 +45,11 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 .Where("IsDeleted", false)
                 .CountAsync<int>();
 
+            // only transcripts that have audio but not yet processed
             var unprocessedTranscripts = await db.Query("MeetingTranscripts as t")
                 .Join("Meetings as m", "m.Id", "t.MeetingId")
                 .Where("m.HostId", userId)
-                .Where("t.IsProcessed", false)
+                .Where("t.Status", 0) // TranscriptStatus.PendingTranscription
                 .CountAsync<int>();
 
             return new DashboardStatsDto
@@ -59,7 +61,6 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 UnprocessedTranscriptsCount = unprocessedTranscripts
             };
         }
-
 
         public async Task<List<UpcomingMeetingDto>> GetUpcomingMeetingsAsync(string userId, int count = 5)
         {
@@ -78,12 +79,11 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                 LEFT JOIN MeetingParticipants mp ON mp.MeetingId = m.Id
                 WHERE (m.HostId = @UserId OR mp.UserId = @UserId)
                   AND m.ScheduledAt > @Now
-                  --AND m.IsDeleted = 0
                 ORDER BY m.ScheduledAt
                 OFFSET 0 ROWS FETCH NEXT @Count ROWS ONLY
                 """;
 
-            var connection = db.Connection; 
+            var connection = db.Connection;
 
             var items = await connection.QueryAsync<UpcomingMeetingDto>(sql, new
             {
@@ -108,8 +108,10 @@ namespace MeetIQ.Infrastructure.Persistence.Repositories
                     "m.Title as MeetingTitle"
                 )
                 .LeftJoin("Meetings as m", "m.Id", "t.MeetingId")
-                .Where("t.UserId", userId)
                 .Where("t.IsDeleted", false)
+                .Where(q => q
+                    .Where("t.UserId", userId)
+                    .OrWhere("t.AssigneeId", userId))
                 .OrderByDesc("t.CreatedAt")
                 .Limit(count)
                 .GetAsync<RecentTaskDto>();
